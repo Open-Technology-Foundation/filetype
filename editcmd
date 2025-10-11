@@ -42,7 +42,7 @@
 # Load core library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=filetype-lib.sh
-source "$SCRIPT_DIR/filetype-lib.sh"
+source "$SCRIPT_DIR/filetype-lib.sh" || exit $?
 
 # Shell options for pattern matching and safety
 set -euo pipefail
@@ -58,9 +58,10 @@ while (($#)); do case "$1" in
   -h|--help)
     declare -- line
     while read -r line; do
-      [[ -z $line ]] && break;
-      [[ ${line:0:2} == '#!' || ${line:0:11} == '#shellcheck' ]] && continue
-      [[ ${line:0:1} == '#' ]] && echo "${line:2}";
+      [[ -z "${line// /}" ]] && break;
+      [[ ${line:0:2} == '#!' || [[ $line =~ ^#[[:blank:]]*shellcheck ]] && continue
+      [[ $line == '#' ]] && { echo; continue; }
+      [[ ${line:0:2} == '# ' ]] && echo "${line:2}";
     done < "$0"
     exit 0
     ;;
@@ -72,15 +73,15 @@ while (($#)); do case "$1" in
     shift
     editor_type="${1:-}"
     [[ $editor_type =~ ^(joe|nano|vim|emacs|vscode)$ ]] || {
-      echo "error: Invalid editor '$editor_type'. Must be: joe, nano, vim, emacs, or vscode" >&2
+      >&2 echo "error: Invalid editor '$editor_type'. Must be: joe, nano, vim, emacs, or vscode"
       exit 22
     }
     ;;
   -l|--line-no)
     shift
     line_no=${1:-0}
-    [[ $line_no -ge 0 ]] || {
-      echo "error: Line number must be non-negative" >&2
+    ((line_no > -1)) || {
+      >&2 echo "error: Line number must be non-negative"
       exit 1
     }
     ;;
@@ -90,17 +91,17 @@ while (($#)); do case "$1" in
   +[0-9]*)  # Vim-style +NUM
     line_no=${1:1}  # Strip the + prefix
     ;;
-  -[heplV]*) #shellcheck disable=SC2046 # expand aggregated short options
+  -[hVelp]*) #shellcheck disable=SC2046 # expand aggregated short options
     set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
   -*)
-    echo "error: Unknown option '$1'" >&2
+    >&2 echo "error: Unknown option '$1'"
     exit 22
     ;;
   *)
     if [[ -z $filename ]]; then
       filename="$1"
     else
-      echo "error: Multiple filenames not supported. Use one file at a time." >&2
+      >&2 echo "error: Multiple filenames not supported. Use one file at a time."
       exit 1
     fi
     ;;
@@ -108,19 +109,19 @@ esac; shift; done
 
 # Check if filename specified
 if [[ -z $filename ]]; then
-  echo "error: No file specified" >&2
-  echo "Usage: editcmd [options] <filename>" >&2
-  echo "Try 'editcmd --help' for more information." >&2
+  >&2 echo "error: No file specified"
+  >&2 echo "Usage: editcmd [options] <filename>"
+  >&2 echo "Try 'editcmd --help' for more information."
   exit 1
 fi
 
 # Determine editor
 if [[ -z $editor_type ]]; then
   editor_type=$(detect_editor_from_env)
-  # Only default to vim if EDITOR environment variable is not set
+  # Only default to nano if EDITOR environment variable is not set
   # (detect_editor_from_env returns 'joe' as fallback when EDITOR is unset)
-  if [[ $editor_type == 'joe' && -z "${EDITOR:-}" ]]; then
-    editor_type='vim'
+  if [[ $editor_type == joe && -z "${EDITOR:-}" ]]; then
+    editor_type=nano
   fi
 fi
 
@@ -129,7 +130,7 @@ export EDITOR_TYPE="$editor_type"
 
 # Detect file type
 syntax=$(filetype "$filename") || {
-  echo "error: Failed to detect file type for '$filename'" >&2
+  >&2 echo "error: Failed to detect file type for '$filename'"
   exit 1
 }
 
