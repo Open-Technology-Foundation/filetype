@@ -90,6 +90,24 @@ assert_not_equals() {
   fi
 }
 
+assert_not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local description="$3"
+
+  if [[ "$haystack" != *"$needle"* ]]; then
+    echo -e "${GREEN}PASS${NC}: $description"
+    ((PASS_COUNT+=1))
+    return 0
+  else
+    echo -e "${RED}FAIL${NC}: $description"
+    echo "  Should not contain: '$needle'"
+    echo "  But got:            '$haystack'"
+    ((FAIL_COUNT+=1))
+    return 1
+  fi
+}
+
 skip_test() {
   local reason="$1"
   echo -e "${YELLOW}SKIP${NC}: $reason"
@@ -144,6 +162,7 @@ run_filetype_python() {
 # Export functions for use in sub-scripts
 export -f assert_equals
 export -f assert_contains
+export -f assert_not_contains
 export -f assert_exit_code
 export -f assert_not_equals
 export -f skip_test

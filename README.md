@@ -58,13 +58,21 @@ Both tools are available as Bash scripts and Python modules with identical funct
 
 ## Supported File Types
 
-Returns one of the following type identifiers:
-- `bash` / `sh` - Bash/shell scripts
-- `py` / `python` - Python files
-- `php` - PHP files
-- `c` - C/C++ source files
-- `text` - Plain text files
-- `binary` - Binary/non-text files
+Detects 40+ file types and returns editor-appropriate syntax names. Common types include:
+
+- **Shell scripts**: `sh`, `bash` (based on shebang or content analysis)
+- **Programming languages**: `python`, `c`, `cpp`, `js`, `php`, `ruby`, `perl`, `java`, `go`, `rust`
+- **Web**: `html`, `css`, `xml`, `json`, `yaml`
+- **Markup**: `markdown`, `latex`, `rst`
+- **Config**: `ini`, `conf`, `toml`
+- **Other**: `sql`, `makefile`, `dockerfile`, `diff`, `text`, `binary`
+
+The exact syntax name returned depends on the editor specified (via `-e` flag):
+- **joe** (default): Base syntax names (`sh`, `python`, `c`, `js`, `json`, `md`)
+- **nano**: Full names (`javascript` not `js`, `markdown` not `md`, `patch` not `diff`)
+- **vim**: Language-specific (`bash` for bash scripts, `cpp` for C++, `markdown` not `md`)
+- **emacs**: Mode names (`python-mode`, `c-mode`, `javascript-mode`, `markdown-mode`)
+- **vscode**: VSCode identifiers (`shellscript` not `sh`, `cpp` for C++)
 
 ## Architecture
 
@@ -125,6 +133,10 @@ export PATH="/path/to/filetype:$PATH"
 ### Quick Start
 
 ```bash
+# Check version
+filetype -V                     # Returns: filetype 1.0.0
+editcmd -V                      # Returns: editcmd 1.0.0
+
 # Detect file type
 filetype script.py              # Returns: python
 
@@ -169,8 +181,9 @@ editcmd +100 test.c             # Vim-style: open at line 100
 editcmd -e nano script.py       # Force nano
 editcmd -e vim +50 app.js       # Vim at line 50
 
-# Preview command (dry-run)
-editcmd --dry-run script.py     # Shows: vim -c 'set filetype=python' script.py
+# Preview command (print without executing)
+editcmd -p script.py            # Shows: vim -c 'set filetype=python' script.py
+editcmd --dry-run script.py     # Same as -p
 
 # Multiple options
 editcmd -e emacs -l 25 test.c   # Emacs at line 25
@@ -184,7 +197,7 @@ editcmd -e emacs -l 25 test.c   # Emacs at line 25
 | **Output** | Type string | Executed command |
 | **Primary use** | Scripting, automation | Interactive editing |
 | **Line positioning** | ❌ No | ✅ Yes (`-l` or `+NUM`) |
-| **Dry-run mode** | N/A | ✅ Yes (`--dry-run`) |
+| **Print mode** | N/A | ✅ Yes (`-p`, `--print`, `--dry-run`) |
 | **Batch mode** | ✅ Multiple files | ❌ One file at a time |
 | **Executes editor** | ❌ No | ✅ Yes |
 
@@ -198,11 +211,11 @@ source /path/to/filetype
 
 # Use the function
 result=$(filetype somefile.sh)
-echo "$result"  # Output: bash
+echo "$result"  # Output: sh
 
 # In your scripts
-if [[ $(filetype "$file") == "binary" ]]; then
-  echo "Cannot edit binary file"
+if [[ $(filetype "$file") == 'binary' ]]; then
+  echo 'Cannot edit binary file'
   exit 1
 fi
 ```
@@ -210,20 +223,20 @@ fi
 #### Python Library
 
 ```python
-# Import the module
-from filetype import filetype
+# Import from the core library
+from filetype_lib import filetype
 
 # Detect file type
 result = filetype('somefile.py')
 print(result)  # Output: python
 
 # With metadata
-result, detected = filetype('script.sh', return_metadata=True)
-print(f"Type: {result}, Detected as: {detected}")
+syntax, is_bash = filetype('script.sh', return_metadata=True)
+print(f"Type: {syntax}, Is Bash: {is_bash}")
 
 # Use in your code
 if filetype('myfile') == 'binary':
-    raise ValueError("Cannot process binary file")
+    raise ValueError('Cannot process binary file')
 ```
 
 ## Command-Line Options
@@ -235,6 +248,7 @@ filetype [options] <file> [<file2> ...]
 
 Options:
   -e, --editor EDITOR   Return syntax name for specific editor
+  -V, --version         Show version information
   -h, --help            Show help message
 
 Supported editors: joe, nano, vim, emacs, vscode
@@ -249,7 +263,9 @@ Options:
   -e, --editor EDITOR   Editor to use (default: $EDITOR or vim)
   -l, --line-no NUM     Jump to line NUM
   +NUM                  Jump to line NUM (vim-style shorthand)
-  --dry-run             Show command without executing
+  -p, --print           Print command without executing
+  --dry-run             Print command without executing (same as -p)
+  -V, --version         Show version information
   -h, --help            Show help message
 
 Supported editors: joe, nano, vim, emacs, vscode
@@ -286,15 +302,23 @@ The detection follows this order:
 ```bash
 # Detect by extension
 $ filetype script.sh
-bash
+sh
 
-# Detect by shebang
+# Detect by shebang (bash script without extension)
 $ filetype script
-bash
+sh
 
 # Binary file
 $ filetype /bin/ls
 binary
+
+# Different syntax for different editors
+$ filetype -e vim script.sh
+bash
+$ filetype -e nano script.py
+python
+$ filetype -e emacs app.c
+c-mode
 ```
 
 ### Editor Launching with editcmd
@@ -316,8 +340,8 @@ $ editcmd "my script.sh"
 $ editcmd /bin/ls
 error: Cannot edit binary file '/bin/ls'
 
-# Dry-run to see command
-$ editcmd --dry-run test.py
+# Print command without executing
+$ editcmd -p test.py
 vim -c 'set filetype=python' test.py
 ```
 
@@ -346,15 +370,20 @@ $ editcmd -e vscode -l 50 config.json
 ```bash
 # Process multiple files
 $ filetype *.sh *.py
-script1.sh: bash
-script2.sh: bash
+script1.sh: sh
+script2.sh: sh
 test.py: python
 main.py: python
 
-# Detect syntax for all Python files with specific editor
-$ filetype -e vim *.py
-test.py: python
-main.py: python
+# Detect syntax for all shell files with vim
+$ filetype -e vim *.sh
+script1.sh: bash
+script2.sh: bash
+
+# Detect syntax for Python files with emacs
+$ filetype -e emacs *.py
+test.py: python-mode
+main.py: python-mode
 ```
 
 ## editcmd - Advanced Usage
@@ -409,15 +438,17 @@ git blame file.py | grep "bug" | cut -d' ' -f1 | \
 ```bash
 # Edit file at function definition
 edit_function() {
-  local func="$1" file="$2"
-  local line=$(grep -n "def $func" "$file" | cut -d: -f1)
+  local -- func="$1" file="$2"
+  local -- line
+  line=$(grep -n "def $func" "$file" | cut -d: -f1)
   editcmd -l "$line" "$file"
 }
 
 # Edit file at class definition
 edit_class() {
-  local class="$1" file="$2"
-  local line=$(grep -n "class $class" "$file" | cut -d: -f1)
+  local -- class="$1" file="$2"
+  local -- line
+  line=$(grep -n "class $class" "$file" | cut -d: -f1)
   editcmd -l "$line" "$file"
 }
 
@@ -427,21 +458,25 @@ alias n='editcmd -e nano'
 alias e='editcmd -e emacs'
 ```
 
-### Dry-Run Mode
+### Print Mode (Dry-Run)
 
-Test commands before executing:
+Test commands before executing using `-p`, `--print`, or `--dry-run`:
 
 ```bash
 # Preview what will be executed
-$ editcmd --dry-run -l 42 script.py
+$ editcmd -p -l 42 script.py
 vim +42 -c 'set filetype=python' script.py
 
+# Same with --print or --dry-run
+$ editcmd --print script.py
+vim -c 'set filetype=python' script.py
+
 # Use in scripts to build command strings
-cmd=$(editcmd --dry-run -e nano +50 app.js)
+cmd=$(editcmd -p -e nano +50 app.js)
 echo "Would execute: $cmd"
 
 # Validate before execution
-if editcmd --dry-run script.py | grep -q "Cannot edit"; then
+if editcmd -p script.py | grep -q "Cannot edit"; then
   echo "File is binary or invalid"
 else
   editcmd script.py
@@ -463,7 +498,7 @@ source /path/to/filetype-lib.sh
 for file in "$@"; do
   type=$(filetype "$file")
 
-  if [[ $type == "binary" ]]; then
+  if [[ $type == 'binary' ]]; then
     echo "Skipping binary: $file"
     continue
   fi
@@ -473,9 +508,9 @@ for file in "$@"; do
 done
 
 # Build editor commands programmatically
-syntax=$(filetype "script.py")
-syntax=$(map_to_editor "$syntax" "script.py")
-cmd=$(build_editor_command "vim" "$syntax" "script.py" 42)
+syntax=$(filetype 'script.py')
+syntax=$(map_to_editor "$syntax" 'script.py')
+cmd=$(build_editor_command 'vim' "$syntax" 'script.py' 42)
 echo "Would run: $cmd"
 ```
 

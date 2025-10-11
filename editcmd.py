@@ -10,7 +10,8 @@ Options:
                         Default: Detects from $EDITOR environment variable,
                                  or 'vim' if not set
   -l, --line-no NUM     Jump to line NUM
-  --dry-run             Show command without executing
+  -p, --print           Print command without executing
+  --dry-run             Print command without executing (same as -p)
   -h, --help            Show this help message
 
 Arguments:
@@ -71,8 +72,8 @@ def main():
                       help='Editor to use (default: from $EDITOR or vim)')
   parser.add_argument('-l', '--line-no', type=int, default=0, dest='line_no',
                       help='Jump to line NUM')
-  parser.add_argument('--dry-run', action='store_true', dest='dry_run',
-                      help='Show command without executing')
+  parser.add_argument('-p', '--print', '--dry-run', action='store_true', dest='dry_run',
+                      help='Print command without executing')
   parser.add_argument('filename', nargs='?', help='File to edit')
 
   try:
@@ -105,8 +106,9 @@ def main():
 
   # Determine editor
   editor = args.editor if args.editor else detect_editor_from_env()
-  # Default to vim if not set (not joe)
-  if editor == 'joe' and not args.editor:
+  # Only default to vim if EDITOR environment variable is not set
+  # (detect_editor_from_env returns 'joe' as fallback when EDITOR is unset)
+  if editor == 'joe' and not args.editor and not os.environ.get('EDITOR'):
     editor = 'vim'
 
   try:

@@ -10,7 +10,8 @@
 #                                  or 'vim' if not set
 #   -l, --line-no NUM     Jump to line NUM
 #   +NUM                  Jump to line NUM (vim-style shorthand)
-#   --dry-run             Show command without executing
+#   -p, --print           Print command without executing
+#   --dry-run             Print command without executing (same as -p)
 #   -h, --help            Show this help message
 #
 # Arguments:
@@ -83,13 +84,13 @@ while (($#)); do case "$1" in
       exit 1
     }
     ;;
-  --dry-run)
+  -p|--print|--dry-run)
     dry_run=1
     ;;
   +[0-9]*)  # Vim-style +NUM
     line_no=${1:1}  # Strip the + prefix
     ;;
-  -[helV]*) #shellcheck disable=SC2046 # expand aggregated short options
+  -[heplV]*) #shellcheck disable=SC2046 # expand aggregated short options
     set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
   -*)
     echo "error: Unknown option '$1'" >&2
@@ -116,8 +117,11 @@ fi
 # Determine editor
 if [[ -z $editor_type ]]; then
   editor_type=$(detect_editor_from_env)
-  # Default to vim if not set
-  [[ $editor_type == 'joe' ]] && editor_type='vim'
+  # Only default to vim if EDITOR environment variable is not set
+  # (detect_editor_from_env returns 'joe' as fallback when EDITOR is unset)
+  if [[ $editor_type == 'joe' && -z "${EDITOR:-}" ]]; then
+    editor_type='vim'
+  fi
 fi
 
 # Export EDITOR_TYPE for map_to_editor function

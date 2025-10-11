@@ -387,6 +387,33 @@ $FILETYPE -h >/dev/null && exit_code=$? || exit_code=$?
 assert_exit_code 0 "$exit_code" "-h → exit 0"
 
 # ========================================
+# 13. VERSION FLAG TESTS
+# ========================================
+
+print_section "Version Flag Tests"
+
+# -V flag
+result=$($FILETYPE -V)
+assert_contains "$result" "filetype" "-V outputs 'filetype'"
+assert_contains "$result" "1.0.0" "-V outputs version number"
+
+# --version flag
+result=$($FILETYPE --version)
+assert_contains "$result" "filetype" "--version outputs 'filetype'"
+assert_contains "$result" "1.0.0" "--version outputs version number"
+
+# Version exits successfully
+$FILETYPE -V >/dev/null && exit_code=$? || exit_code=$?
+assert_exit_code 0 "$exit_code" "-V → exit 0"
+
+$FILETYPE --version >/dev/null && exit_code=$? || exit_code=$?
+assert_exit_code 0 "$exit_code" "--version → exit 0"
+
+# Version format check (no word "version" in output)
+result=$($FILETYPE -V)
+assert_not_contains "$result" "version 1.0.0" "-V format: no 'version' word"
+
+# ========================================
 # SUMMARY
 # ========================================
 

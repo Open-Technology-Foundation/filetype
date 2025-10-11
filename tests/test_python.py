@@ -404,6 +404,33 @@ class TestErrorHandling:
         assert exit_code == 0
 
 
+class TestVersionFlag:
+    """Test version flag"""
+
+    def test_version_short_flag(self):
+        """-V outputs version"""
+        output, exit_code = run_filetype("-V")
+        assert exit_code == 0
+        assert "filetype" in output
+        assert "1.0.0" in output
+        assert "version 1.0.0" not in output  # Should not have word "version"
+
+    def test_version_long_flag(self):
+        """--version outputs version"""
+        output, exit_code = run_filetype("--version")
+        assert exit_code == 0
+        assert "filetype" in output
+        assert "1.0.0" in output
+        assert "version 1.0.0" not in output  # Should not have word "version"
+
+    def test_version_format(self):
+        """Version format is: filetype <version>"""
+        output, exit_code = run_filetype("-V")
+        assert exit_code == 0
+        # Should be "filetype 1.0.0" not "filetype version 1.0.0"
+        assert output.strip() == "filetype 1.0.0"
+
+
 if __name__ == "__main__":
     # Change to tests directory
     os.chdir(SCRIPT_DIR)

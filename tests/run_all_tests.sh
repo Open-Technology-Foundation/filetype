@@ -74,6 +74,7 @@ echo ""
 
 run_suite "Bash Implementation Tests" "./test_bash.sh" || true
 run_suite "Python Implementation Tests" ".venv/bin/python test_python.py" || true
+run_suite "Editcmd Tests (Bash & Python)" "./test_editcmd.sh" || true
 run_suite "Parity Tests (Bash vs Python)" "./test_parity.sh" || true
 run_suite "Library Mode Tests (Bash)" "./test_library_mode.sh" || true
 
