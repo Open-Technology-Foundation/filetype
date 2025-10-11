@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# editcmd - Launch editor with correct syntax highlighting and line positioning
+#
+# Usage:
+#   editcmd [options] <filename>
+#
+# Options:
+#   -e, --editor EDITOR   Editor to use (joe, nano, vim, emacs, vscode)
+#                         Default: Detects from $EDITOR environment variable,
+#                                  or 'vim' if not set
+#   -l, --line-no NUM     Jump to line NUM
+#   +NUM                  Jump to line NUM (vim-style shorthand)
+#   --dry-run             Show command without executing
+#   -h, --help            Show this help message
+#
+# Arguments:
+#   filename - Path to file to edit
+#
+# Description:
+#   editcmd automatically detects file types and launches your editor with
+#   proper syntax highlighting. It can also position the cursor at a specific
+#   line number.
+#
+# Examples:
+#   editcmd script.py              # Open with auto-detected syntax
+#   editcmd -l 42 script.py        # Jump to line 42
+#   editcmd +42 script.py          # Vim-style: jump to line 42
+#   editcmd -e nano script.py      # Use nano instead of default
+#   editcmd --dry-run script.py    # Show command without running
+#   editcmd +100 -e vim test.c     # Multiple options
+#
+# Integration Examples:
+#   # Jump to error line from linter
+#   error_line=$(pylint script.py | grep -oP 'line \K\d+' | head -1)
+#   editcmd -l "$error_line" script.py
+#
+#   # Open file at grep match
+#   grep -n "TODO" *.py | head -1 | IFS=: read file line rest
+#   editcmd -l "$line" "$file"
+
+# Load core library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=filetype-lib.sh
+source "$SCRIPT_DIR/filetype-lib.sh"
+
+# Shell options for pattern matching and safety
+set -euo pipefail
+shopt -s inherit_errexit extglob nullglob
+
+# Parse command-line arguments
+declare -- editor_type=''
+declare -i line_no=0
+declare -i dry_run=0
+declare -- filename=''
+
+while (($#)); do case "$1" in
+  -h|--help)
+    declare -- line
+    while read -r line; do
+      [[ -z $line ]] && break;
+      [[ ${line:0:2} == '#!' || ${line:0:11} == '#shellcheck' ]] && continue
+      [[ ${line:0:1} == '#' ]] && echo "${line:2}";
+    done < "$0"
+    exit 0
+    ;;
+  -e|--editor)
+    shift
+    editor_type="${1:-}"
+    [[ $editor_type =~ ^(joe|nano|vim|emacs|vscode)$ ]] || {
+      echo "error: Invalid editor '$editor_type'. Must be: joe, nano, vim, emacs, or vscode" >&2
+      exit 22
+    }
+    ;;
+  -l|--line-no)
+    shift
+    line_no=${1:-0}
+    [[ $line_no -gt 0 ]] || {
+      echo "error: Line number must be positive" >&2
+      exit 1
+    }
+    ;;
+  --dry-run)
+    dry_run=1
+    ;;
+  +[0-9]*)  # Vim-style +NUM
+    line_no=${1:1}  # Strip the + prefix
+    ;;
+  -[hel]*) #shellcheck disable=SC2046 # expand aggregated short options
+    set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
+  -*)
+    echo "error: Unknown option '$1'" >&2
+    exit 22
+    ;;
+  *)
+    if [[ -z $filename ]]; then
+      filename="$1"
+    else
+      echo "error: Multiple filenames not supported. Use one file at a time." >&2
+      exit 1
+    fi
+    ;;
+esac; shift; done
+
+# Check if filename specified
+if [[ -z $filename ]]; then
+  echo "error: No file specified" >&2
+  echo "Usage: editcmd [options] <filename>" >&2
+  echo "Try 'editcmd --help' for more information." >&2
+  exit 1
+fi
+
+# Determine editor
+if [[ -z $editor_type ]]; then
+  editor_type=$(detect_editor_from_env)
+  # Default to vim if not set
+  [[ $editor_type == 'joe' ]] && editor_type='vim'
+fi
+
+# Export EDITOR_TYPE for map_to_editor function
+export EDITOR_TYPE="$editor_type"
+
+# Detect file type
+syntax=$(filetype "$filename") || {
+  echo "error: Failed to detect file type for '$filename'" >&2
+  exit 1
+}
+
+# Map to editor-specific syntax
+syntax=$(map_to_editor "$syntax" "$filename")
+
+# Build editor command
+cmd=$(build_editor_command "$editor_type" "$syntax" "$filename" "$line_no") || {
+  exit 1
+}
+
+# Execute or print command
+if ((dry_run)); then
+  echo "$cmd"
+else
+  # Use bash -c instead of eval for better isolation
+  # The command is already safely constructed with printf %q for filename quoting
+  bash -c "$cmd"
+fi
+
+#fin

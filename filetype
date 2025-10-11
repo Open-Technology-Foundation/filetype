@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# filetype - Determine file type and return editor-specific syntax name
+#
+# Usage:
+#   filetype [options] <filename>           # Single file
+#   filetype [options] <file1> <file2> ...  # Batch mode
+#   source filetype && filetype <filename>  # As library
+#
+# Options:
+#   -e, --editor EDITOR   Return syntax name for specified editor
+#                         Supported: joe, nano, vim, emacs, vscode
+#                         Default: Detects from $EDITOR environment variable,
+#                                  or 'joe' if not set
+#   -h, --help            Show this help message
+#
+# Arguments:
+#   filename - Path to file to analyze (may or may not exist)
+#
+# Output:
+#   Returns editor-specific syntax name for syntax highlighting.
+#   joe (default): sh, python, c, js, json, md, diff, etc.
+#   nano:          sh, python, c, javascript, json, markdown, patch, etc.
+#   vim:           sh/bash, python, c/cpp, javascript, json, markdown, diff, etc.
+#   emacs:         sh-mode, python-mode, c-mode, javascript-mode, json-mode, markdown-mode, etc.
+#   vscode:        shellscript, python, c/cpp, javascript, json, markdown, diff, etc.
+#
+# Detection Order:
+#   1. Extension matching (.sh → sh, .py → python, etc.)
+#   2. Shebang line inspection (#!/bin/bash → sh, etc.)
+#   3. MIME type analysis via file(1) command
+#   4. Binary file detection (ELF, PE32, Mach-O, media files)
+#   5. Default to 'text' if all checks fail or file doesn't exist
+#
+# Examples:
+#   filetype script.sh                  # Returns: sh (joe default)
+#   filetype -e nano app.js             # Returns: javascript
+#   filetype -e vim README.md           # Returns: markdown
+#   filetype -e emacs program.py        # Returns: python-mode
+#   filetype -e vscode file.sh          # Returns: shellscript
+#   filetype -e vim file1.sh file2.js   # Returns: file1.sh: bash\nfile2.js: javascript
+#   filetype /bin/ls                    # Returns: binary
+#
+# Shell Function Usage:
+#   edit() {
+#     local -- syntax=$(filetype "$1")
+#     joe -syntax "$syntax" "$1"
+#   }
+#   edit script.sh  # Automatically opens with correct syntax highlighting
+#
+# Note: For launching editors with syntax highlighting, see the 'editcmd' tool.
+
+# Load core library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=filetype-lib.sh
+source "$SCRIPT_DIR/filetype-lib.sh"
+
+# If run as script:
+if [[ "${BASH_SOURCE[0]:-}" == "$0" ]]; then
+  set -euo pipefail
+  # Shell options for safety
+  shopt -s inherit_errexit extglob nullglob
+
+  # Parse options
+  declare -- EDITOR_TYPE=''
+  declare -a files=()
+
+  while (($#)); do case "$1" in
+    -h|--help)
+      declare -- line
+      while read -r line; do
+        [[ -z $line ]] && break;
+        [[ ${line:0:2} == '#!' || ${line:0:11} == '#shellcheck' ]] && continue
+        [[ ${line:0:1} == '#' ]] && echo "${line:2}";
+      done < "$0"
+      exit 0
+      ;;
+    -e|--editor)
+      shift
+      EDITOR_TYPE="${1:-}"
+      [[ $EDITOR_TYPE =~ ^(joe|nano|vim|emacs|vscode)$ ]] || {
+        echo "error: Invalid editor '$EDITOR_TYPE'. Must be: joe, nano, vim, emacs, or vscode" >&2
+        exit 22
+      }
+      ;;
+    -[he]*) #shellcheck disable=SC2046 # expand aggregated short options
+      set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
+    -*)
+      echo "error: Unknown option '$1'" >&2
+      exit 22
+      ;;
+    *)
+      files+=("$1")
+      ;;
+  esac; shift; done
+
+  # Check if any files specified
+  if ((${#files[@]} == 0)); then
+    echo "error: No files specified" >&2
+    exit 1
+  fi
+
+  # Export EDITOR_TYPE for use in filetype function
+  export EDITOR_TYPE
+
+  # Check if multiple files provided (batch mode)
+  if ((${#files[@]} > 1)); then
+    declare -- file result
+    for file in "${files[@]}"; do
+      result=$(filetype "$file")
+      result=$(map_to_editor "$result" "$file")
+      printf '%s: %s\n' "$file" "$result"
+    done
+  else
+    # Single file mode
+    result=$(filetype "${files[0]}")
+    result=$(map_to_editor "$result" "${files[0]}")
+    echo "$result"
+  fi
+fi
+
+#fin

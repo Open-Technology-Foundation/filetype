@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Bash completion for filetype command
+
+_filetype() {
+    local cur prev words cword
+    _init_completion || return
+
+    case $prev in
+        -h|--help)
+            return 0
+            ;;
+        -e|--editor)
+            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode" -- "$cur") )
+            return 0
+            ;;
+    esac
+
+    case $cur in
+        -*)
+            COMPREPLY=( $(compgen -W "-h --help -e --editor" -- "$cur") )
+            return 0
+            ;;
+    esac
+
+    # Complete with filenames
+    _filedir
+}
+
+complete -F _filetype filetype
