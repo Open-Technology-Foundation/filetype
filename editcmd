@@ -63,6 +63,10 @@ while (($#)); do case "$1" in
     done < "$0"
     exit 0
     ;;
+  -V|--version)
+    echo "editcmd $FT_VERSION"
+    exit 0
+    ;;
   -e|--editor)
     shift
     editor_type="${1:-}"
@@ -85,7 +89,7 @@ while (($#)); do case "$1" in
   +[0-9]*)  # Vim-style +NUM
     line_no=${1:1}  # Strip the + prefix
     ;;
-  -[hel]*) #shellcheck disable=SC2046 # expand aggregated short options
+  -[helV]*) #shellcheck disable=SC2046 # expand aggregated short options
     set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
   -*)
     echo "error: Unknown option '$1'" >&2

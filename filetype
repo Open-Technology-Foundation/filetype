@@ -74,6 +74,10 @@ if [[ "${BASH_SOURCE[0]:-}" == "$0" ]]; then
       done < "$0"
       exit 0
       ;;
+    -V|--version)
+      echo "filetype $FT_VERSION"
+      exit 0
+      ;;
     -e|--editor)
       shift
       EDITOR_TYPE="${1:-}"
@@ -82,7 +86,7 @@ if [[ "${BASH_SOURCE[0]:-}" == "$0" ]]; then
         exit 22
       }
       ;;
-    -[he]*) #shellcheck disable=SC2046 # expand aggregated short options
+    -[heV]*) #shellcheck disable=SC2046 # expand aggregated short options
       set -- '' $(printf -- "-%c " $(grep -o . <<<"${1:1}")) "${@:2}";;
     -*)
       echo "error: Unknown option '$1'" >&2

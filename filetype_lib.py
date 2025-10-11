@@ -29,6 +29,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Version
+FT_VERSION = "1.0.0"
+
 # Editor syntax name mappings
 EDITOR_MAPPINGS = {
     'nano': {

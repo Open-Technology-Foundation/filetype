@@ -54,7 +54,7 @@ import argparse
 import sys
 
 # Import from library
-from filetype_lib import filetype, map_to_editor, detect_editor_from_env
+from filetype_lib import filetype, map_to_editor, detect_editor_from_env, FT_VERSION
 
 def main():
   """Main entry point when run as a script"""
@@ -64,6 +64,7 @@ def main():
     exit_on_error=False  # Prevent argparse from exiting with code 2
   )
   parser.add_argument('-h', '--help', action='store_true', help='Show help message')
+  parser.add_argument('-V', '--version', action='store_true', help='Show version information')
   parser.add_argument('-e', '--editor', default='', choices=['', 'joe', 'nano', 'vim', 'emacs', 'vscode'],
                       help='Return syntax name for specified editor (default: from $EDITOR or joe)')
   parser.add_argument('files', nargs='*', help='File(s) to analyze')
@@ -81,6 +82,10 @@ def main():
 
   if args.help:
     print(__doc__)
+    sys.exit(0)
+
+  if args.version:
+    print(f"filetype {FT_VERSION}")
     sys.exit(0)
 
   # Match bash behavior: exit 1 if no files specified

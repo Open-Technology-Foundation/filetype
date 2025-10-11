@@ -18,6 +18,10 @@
 #   - filetype
 #
 
+# Version
+declare -r FT_VERSION='1.0.0'
+declare -fx FT_VERSION
+
 # Detect editor from EDITOR environment variable
 detect_editor_from_env() {
   local -- editor_path="${EDITOR:-}"

@@ -1,6 +1,36 @@
 # filetype & editcmd
 
+[![GitHub](https://img.shields.io/badge/GitHub-Open--Technology--Foundation%2Ffiletype-blue?logo=github)](https://github.com/Open-Technology-Foundation/filetype)
+[![License](https://img.shields.io/badge/License-Open%20Source-green.svg)](https://github.com/Open-Technology-Foundation/filetype)
+[![Bash](https://img.shields.io/badge/Bash-4.0%2B-blue.svg)](https://www.gnu.org/software/bash/)
+[![Python](https://img.shields.io/badge/Python-3.6%2B-blue.svg)](https://www.python.org/)
+
 A dual-tool, dual-implementation suite for file type detection and smart editor launching.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Supported File Types](#supported-file-types)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Quick Start](#quick-start)
+  - [filetype - File Type Detection](#filetype---file-type-detection)
+  - [editcmd - Smart Editor Launcher](#editcmd---smart-editor-launcher)
+  - [Tool Comparison](#tool-comparison)
+  - [Library Mode](#library-mode)
+- [Command-Line Options](#command-line-options)
+- [Detection Logic](#detection-logic)
+- [Examples](#examples)
+- [Advanced Usage](#editcmd---advanced-usage)
+- [Testing](#testing)
+- [Error Handling](#error-handling)
+- [Bash Completion](#bash-completion)
+- [Requirements](#requirements)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Overview
 
@@ -58,9 +88,26 @@ Both `filetype` and `editcmd` import from the same core libraries, ensuring:
 
 ## Installation
 
-The module includes a `.symlink` file for easy installation. The symlink target name is `filetype`.
+### From GitHub
+
+```bash
+# Clone the repository
+git clone https://github.com/Open-Technology-Foundation/filetype.git
+cd filetype
+
+# Add to PATH or create symlinks
+ln -s "$(pwd)/filetype" /usr/local/bin/filetype
+ln -s "$(pwd)/filetype.py" /usr/local/bin/filetype.py
+ln -s "$(pwd)/editcmd" /usr/local/bin/editcmd
+ln -s "$(pwd)/editcmd.py" /usr/local/bin/editcmd.py
+
+# Or add directory to PATH
+export PATH="$(pwd):$PATH"
+```
 
 ### Manual Installation
+
+If you already have the files:
 
 ```bash
 # Add to PATH or create symlinks
@@ -545,7 +592,6 @@ filetype/
 ├── editcmd                  # Bash launcher CLI (~115 lines)
 ├── editcmd.py               # Python launcher CLI (~120 lines)
 ├── README.md                # This file
-├── CLAUDE.md                # Development/AI assistant guidance
 ├── .bash_completion         # Bash completion support
 └── tests/                   # Test suite (340+ tests)
     ├── test_bash.sh
@@ -562,6 +608,14 @@ filetype/
 
 ## Contributing
 
+Contributions are welcome! Please visit the [GitHub repository](https://github.com/Open-Technology-Foundation/filetype) to:
+- Report issues
+- Submit pull requests
+- Suggest new features
+- Improve documentation
+
+### Development Guidelines
+
 When modifying detection logic:
 
 1. **Edit Libraries First**: All changes go in `filetype-lib.sh` and `filetype_lib.py`
@@ -571,12 +625,28 @@ When modifying detection logic:
 5. **Exit Codes**: Maintain consistent exit codes across implementations
 6. **Update Both Tools**: If adding features, update both `filetype` and `editcmd` if applicable
 
+### Reporting Issues
+
+Please report bugs and feature requests on the [GitHub Issues](https://github.com/Open-Technology-Foundation/filetype/issues) page.
+
 ## License
 
 This is a utility library for file type detection and editor integration.
 
+See the [GitHub repository](https://github.com/Open-Technology-Foundation/filetype) for more information.
+
 ## Version
 
 Current version: 1.0.0
+
+## Links
+
+- **GitHub Repository**: https://github.com/Open-Technology-Foundation/filetype
+- **Report Issues**: https://github.com/Open-Technology-Foundation/filetype/issues
+- **Open Technology Foundation**: https://github.com/Open-Technology-Foundation
+
+---
+
+**Maintained by**: [Open Technology Foundation](https://github.com/Open-Technology-Foundation)
 
 #fin

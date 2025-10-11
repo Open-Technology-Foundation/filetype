@@ -47,7 +47,7 @@ import os
 import shlex
 
 # Import from library
-from filetype_lib import filetype, map_to_editor, build_editor_command, detect_editor_from_env
+from filetype_lib import filetype, map_to_editor, build_editor_command, detect_editor_from_env, FT_VERSION
 
 def main():
   """Main entry point when run as a script"""
@@ -66,6 +66,7 @@ def main():
     exit_on_error=False
   )
   parser.add_argument('-h', '--help', action='store_true', help='Show help message')
+  parser.add_argument('-V', '--version', action='store_true', help='Show version information')
   parser.add_argument('-e', '--editor', default='', choices=['', 'joe', 'nano', 'vim', 'emacs', 'vscode'],
                       help='Editor to use (default: from $EDITOR or vim)')
   parser.add_argument('-l', '--line-no', type=int, default=0, dest='line_no',
@@ -84,6 +85,10 @@ def main():
 
   if args.help:
     print(__doc__)
+    sys.exit(0)
+
+  if args.version:
+    print(f"editcmd {FT_VERSION}")
     sys.exit(0)
 
   # Check if filename specified
