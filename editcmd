@@ -79,8 +79,8 @@ while (($#)); do case "$1" in
   -l|--line-no)
     shift
     line_no=${1:-0}
-    [[ $line_no -gt 0 ]] || {
-      echo "error: Line number must be positive" >&2
+    [[ $line_no -ge 0 ]] || {
+      echo "error: Line number must be non-negative" >&2
       exit 1
     }
     ;;

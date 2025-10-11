@@ -47,6 +47,12 @@ import sys
 import os
 import shlex
 
+# Add script directory to Python path to find filetype_lib module
+# This allows the script to work when installed via copy to /usr/local/bin
+script_dir = os.path.dirname(os.path.realpath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
 # Import from library
 from filetype_lib import filetype, map_to_editor, build_editor_command, detect_editor_from_env, FT_VERSION
 
@@ -74,7 +80,7 @@ def main():
                       help='Jump to line NUM')
   parser.add_argument('-p', '--print', '--dry-run', action='store_true', dest='dry_run',
                       help='Print command without executing')
-  parser.add_argument('filename', nargs='?', help='File to edit')
+  parser.add_argument('filename', nargs='*', help='File to edit')
 
   try:
     args = parser.parse_args(processed_args)
@@ -98,6 +104,14 @@ def main():
     print("Usage: editcmd [options] <filename>", file=sys.stderr)
     print("Try 'editcmd --help' for more information.", file=sys.stderr)
     sys.exit(1)
+
+  # Check for multiple filenames
+  if len(args.filename) > 1:
+    print("error: Multiple filenames not supported. Use one file at a time.", file=sys.stderr)
+    sys.exit(1)
+
+  # Extract single filename
+  args.filename = args.filename[0]
 
   # Validate line number
   if args.line_no < 0:

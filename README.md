@@ -96,37 +96,42 @@ Both `filetype` and `editcmd` import from the same core libraries, ensuring:
 
 ## Installation
 
-### From GitHub
+### Quick Install (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/Open-Technology-Foundation/filetype.git
 cd filetype
 
-# Add to PATH or create symlinks
-ln -s "$(pwd)/filetype" /usr/local/bin/filetype
-ln -s "$(pwd)/filetype.py" /usr/local/bin/filetype.py
-ln -s "$(pwd)/editcmd" /usr/local/bin/editcmd
-ln -s "$(pwd)/editcmd.py" /usr/local/bin/editcmd.py
-
-# Or add directory to PATH
-export PATH="$(pwd):$PATH"
+# Run the installation script
+sudo ./install.sh
 ```
+
+This will copy all necessary files to `/usr/local/bin/` for system-wide access.
 
 ### Manual Installation
 
-If you already have the files:
+If you prefer manual installation or need a custom location:
 
 ```bash
-# Add to PATH or create symlinks
-ln -s /path/to/filetype /usr/local/bin/filetype
-ln -s /path/to/filetype.py /usr/local/bin/filetype.py
-ln -s /path/to/editcmd /usr/local/bin/editcmd
-ln -s /path/to/editcmd.py /usr/local/bin/editcmd.py
+# Copy all files to /usr/local/bin
+sudo cp filetype filetype.py editcmd editcmd.py \
+         filetype-lib.sh filetype_lib.py \
+         /usr/local/bin/
 
-# Or add directory to PATH
+# Set permissions
+sudo chmod 755 /usr/local/bin/{filetype,filetype.py,editcmd,editcmd.py}
+sudo chmod 644 /usr/local/bin/{filetype-lib.sh,filetype_lib.py}
+```
+
+### Alternative: Add to PATH
+
+```bash
+# Add directory to PATH in your ~/.bashrc or ~/.bash_profile
 export PATH="/path/to/filetype:$PATH"
 ```
+
+**Note**: The Python scripts (`filetype.py` and `editcmd.py`) are designed to find their library module (`filetype_lib.py`) in the same directory, so they work correctly when installed via copy to `/usr/local/bin/`.
 
 ## Usage
 

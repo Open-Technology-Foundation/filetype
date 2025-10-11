@@ -52,6 +52,13 @@ Note: For launching editors with syntax highlighting, see the 'editcmd' tool.
 
 import argparse
 import sys
+import os
+
+# Add script directory to Python path to find filetype_lib module
+# This allows the script to work when installed via copy to /usr/local/bin
+script_dir = os.path.dirname(os.path.realpath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
 
 # Import from library
 from filetype_lib import filetype, map_to_editor, detect_editor_from_env, FT_VERSION

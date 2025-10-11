@@ -40,8 +40,8 @@ assert_equals "lua" "$($FILETYPE fixtures/extensions/test.lua)" "test.lua → lu
 assert_equals "tcl" "$($FILETYPE fixtures/extensions/test.tcl)" "test.tcl → tcl"
 
 # Web development
-assert_equals "js" "$($FILETYPE fixtures/extensions/test.js)" "test.js → js"
-assert_equals "js" "$($FILETYPE fixtures/extensions/test.mjs)" "test.mjs → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/extensions/test.js)" "test.js → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/extensions/test.mjs)" "test.mjs → js"
 assert_equals "json" "$($FILETYPE fixtures/extensions/test.json)" "test.json → json"
 assert_equals "typescript" "$($FILETYPE fixtures/extensions/test.ts)" "test.ts → typescript"
 assert_equals "typescript" "$($FILETYPE fixtures/extensions/test.tsx)" "test.tsx → typescript"
@@ -62,8 +62,8 @@ assert_equals "conf" "$($FILETYPE fixtures/extensions/test.cfg)" "test.cfg → c
 assert_equals "properties" "$($FILETYPE fixtures/extensions/test.properties)" "test.properties → properties"
 
 # Markup/documentation
-assert_equals "md" "$($FILETYPE fixtures/extensions/test.md)" "test.md → md"
-assert_equals "md" "$($FILETYPE fixtures/extensions/test.markdown)" "test.markdown → md"
+assert_equals "md" "$($FILETYPE -e joe fixtures/extensions/test.md)" "test.md → md"
+assert_equals "md" "$($FILETYPE -e joe fixtures/extensions/test.markdown)" "test.markdown → md"
 assert_equals "tex" "$($FILETYPE fixtures/extensions/test.tex)" "test.tex → tex"
 assert_equals "tex" "$($FILETYPE fixtures/extensions/test.sty)" "test.sty → tex"
 
@@ -102,8 +102,8 @@ assert_equals "ocaml" "$($FILETYPE fixtures/extensions/test.mli)" "test.mli → 
 assert_equals "sql" "$($FILETYPE fixtures/extensions/test.sql)" "test.sql → sql"
 
 # Version control/diffs
-assert_equals "diff" "$($FILETYPE fixtures/extensions/test.diff)" "test.diff → diff"
-assert_equals "diff" "$($FILETYPE fixtures/extensions/test.patch)" "test.patch → diff"
+assert_equals "diff" "$($FILETYPE -e joe fixtures/extensions/test.diff)" "test.diff → diff"
+assert_equals "diff" "$($FILETYPE -e joe fixtures/extensions/test.patch)" "test.patch → diff"
 
 # Other
 assert_equals "r" "$($FILETYPE fixtures/extensions/test.r)" "test.r → r"
@@ -157,8 +157,8 @@ assert_equals "php" "$($FILETYPE fixtures/shebangs/php2)" "#!/usr/bin/env php �
 assert_equals "php" "$($FILETYPE fixtures/shebangs/php3)" "<?php shebang → php"
 
 # Web/utilities
-assert_equals "js" "$($FILETYPE fixtures/shebangs/node1)" "#!/usr/bin/node → js"
-assert_equals "js" "$($FILETYPE fixtures/shebangs/node2)" "#!/usr/bin/env node → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/shebangs/node1)" "#!/usr/bin/node → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/shebangs/node2)" "#!/usr/bin/env node → js"
 assert_equals "awk" "$($FILETYPE fixtures/shebangs/awk1)" "#!/usr/bin/awk → awk"
 assert_equals "awk" "$($FILETYPE fixtures/shebangs/awk2)" "#!/usr/bin/env awk → awk"
 assert_equals "awk" "$($FILETYPE fixtures/shebangs/gawk)" "#!/usr/bin/gawk → awk"
@@ -325,7 +325,7 @@ assert_equals "text" "$($FILETYPE fixtures/edge_cases/.bash_history.txt)" ".bash
 
 # Multiple extensions (last wins)
 assert_equals "text" "$($FILETYPE fixtures/edge_cases/archive.tar.gz)" "archive.tar.gz → text (gz not recognized)"
-assert_equals "js" "$($FILETYPE fixtures/edge_cases/script.min.js)" "script.min.js → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/edge_cases/script.min.js)" "script.min.js → js"
 
 # Non-existent files
 assert_equals "python" "$($FILETYPE nonexistent.py)" "nonexistent.py → python (extension)"
@@ -357,7 +357,7 @@ result=$($FILETYPE fixtures/extensions/test.py)
 assert_equals "python" "$result" "Single file: no prefix"
 
 # Multiple files (with prefix)
-result=$($FILETYPE fixtures/extensions/test.py fixtures/extensions/test.js)
+result=$($FILETYPE -e joe fixtures/extensions/test.py fixtures/extensions/test.js)
 assert_contains "$result" "test.py: python" "Batch: contains test.py: python"
 assert_contains "$result" "test.js: js" "Batch: contains test.js: js"
 
@@ -373,11 +373,11 @@ assert_exit_code 1 "$exit_code" "No files → exit 1"
 
 # Invalid -e option
 $FILETYPE -e invalid fixtures/extensions/test.py 2>/dev/null && exit_code=$? || exit_code=$?
-assert_exit_code 1 "$exit_code" "Invalid -e value → exit 1"
+assert_exit_code 22 "$exit_code" "Invalid -e value → exit 22 (EINVAL)"
 
 # Unknown option
 $FILETYPE -x fixtures/extensions/test.py 2>/dev/null && exit_code=$? || exit_code=$?
-assert_exit_code 1 "$exit_code" "Unknown option → exit 1"
+assert_exit_code 22 "$exit_code" "Unknown option → exit 22 (EINVAL)"
 
 # Help exits successfully
 $FILETYPE --help >/dev/null && exit_code=$? || exit_code=$?

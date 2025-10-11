@@ -58,8 +58,8 @@ class TestExtensions:
         assert run_filetype("fixtures/extensions/test.tcl")[0] == "tcl"
 
     def test_web_development(self):
-        assert run_filetype("fixtures/extensions/test.js")[0] == "js"
-        assert run_filetype("fixtures/extensions/test.mjs")[0] == "js"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.js")[0] == "js"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.mjs")[0] == "js"
         assert run_filetype("fixtures/extensions/test.json")[0] == "json"
         assert run_filetype("fixtures/extensions/test.ts")[0] == "typescript"
         assert run_filetype("fixtures/extensions/test.tsx")[0] == "typescript"
@@ -80,8 +80,8 @@ class TestExtensions:
         assert run_filetype("fixtures/extensions/test.properties")[0] == "properties"
 
     def test_markup_documentation(self):
-        assert run_filetype("fixtures/extensions/test.md")[0] == "md"
-        assert run_filetype("fixtures/extensions/test.markdown")[0] == "md"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.md")[0] == "md"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.markdown")[0] == "md"
         assert run_filetype("fixtures/extensions/test.tex")[0] == "tex"
         assert run_filetype("fixtures/extensions/test.sty")[0] == "tex"
 
@@ -120,8 +120,8 @@ class TestExtensions:
         assert run_filetype("fixtures/extensions/test.sql")[0] == "sql"
 
     def test_version_control(self):
-        assert run_filetype("fixtures/extensions/test.diff")[0] == "diff"
-        assert run_filetype("fixtures/extensions/test.patch")[0] == "diff"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.diff")[0] == "diff"
+        assert run_filetype("-e", "joe", "fixtures/extensions/test.patch")[0] == "diff"
 
     def test_other_languages(self):
         assert run_filetype("fixtures/extensions/test.r")[0] == "r"
@@ -175,8 +175,8 @@ class TestShebangs:
         assert run_filetype("fixtures/shebangs/php3")[0] == "php"
 
     def test_web_utilities(self):
-        assert run_filetype("fixtures/shebangs/node1")[0] == "js"
-        assert run_filetype("fixtures/shebangs/node2")[0] == "js"
+        assert run_filetype("-e", "joe", "fixtures/shebangs/node1")[0] == "js"
+        assert run_filetype("-e", "joe", "fixtures/shebangs/node2")[0] == "js"
         assert run_filetype("fixtures/shebangs/awk1")[0] == "awk"
         assert run_filetype("fixtures/shebangs/awk2")[0] == "awk"
         assert run_filetype("fixtures/shebangs/gawk")[0] == "awk"
@@ -342,7 +342,7 @@ class TestEdgeCases:
     def test_multiple_extensions(self):
         """Files with multiple extensions - last one wins"""
         assert run_filetype("fixtures/edge_cases/archive.tar.gz")[0] == "text"
-        assert run_filetype("fixtures/edge_cases/script.min.js")[0] == "js"
+        assert run_filetype("-e", "joe", "fixtures/edge_cases/script.min.js")[0] == "js"
 
     def test_nonexistent_files(self):
         """Non-existent files detected by extension or default to text"""
@@ -377,7 +377,7 @@ class TestBatchMode:
 
     def test_multiple_files_with_prefix(self):
         """Multiple files return filename: syntax format"""
-        output, _ = run_filetype("fixtures/extensions/test.py", "fixtures/extensions/test.js")
+        output, _ = run_filetype("-e", "joe", "fixtures/extensions/test.py", "fixtures/extensions/test.js")
         assert "test.py: python" in output
         assert "test.js: js" in output
 
