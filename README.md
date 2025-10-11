@@ -96,7 +96,15 @@ Both `filetype` and `editcmd` import from the same core libraries, ensuring:
 
 ## Installation
 
-### Quick Install (Recommended)
+### One-Liner Install
+
+```bash
+git clone https://github.com/Open-Technology-Foundation/filetype.git && cd filetype && sudo ./install.sh
+```
+
+This will clone the repository, enter the directory, and install all files to `/usr/local/bin/` for system-wide access.
+
+### Quick Install (Step-by-Step)
 
 ```bash
 # Clone the repository
