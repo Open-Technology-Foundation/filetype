@@ -19,8 +19,7 @@
 #
 
 # Version
-declare -r FT_VERSION='1.0.0'
-declare -fx FT_VERSION
+declare -x FT_VERSION='1.0.0'
 
 # Detect editor from EDITOR environment variable
 detect_editor_from_env() {
