@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains a comprehensive test suite for the `filetype` utility with **~1000+ test assertions** covering all permutations of file types, editors, and edge cases.
+This directory contains a comprehensive test suite for the `filetype` utility with **290+ test assertions** covering file types, editors, and edge cases.
 
 ## Quick Start
 
@@ -22,10 +22,9 @@ tests/
 │   ├── binary/            # Binary test files
 │   ├── edge_cases/        # Dotfiles, spaces, etc.
 │   └── cpp/               # C++ specific tests
-├── test_bash.sh           # Bash version: ~240 assertions
-├── test_python.py         # Python version: ~240 assertions
-├── test_parity.sh         # Verify bash/Python parity: ~100 assertions
-├── test_library_mode.sh   # Test bash library sourcing: ~30 assertions
+├── test_bash.sh           # Bash filetype CLI: ~211 assertions
+├── test_editcmd.sh        # Bash editcmd CLI: ~67 assertions
+├── test_library_mode.sh   # Test bash library sourcing: ~21 assertions
 ├── common.sh              # Shared test utilities
 └── run_all_tests.sh       # Master runner
 ```
@@ -56,49 +55,31 @@ Tests all 5 editors with key file types:
 - **emacs**: `-mode` suffix pattern, special cases (`nxml-mode`, `c++-mode`)
 - **vscode**: `sh→shellscript`, C++ detection
 
-### 4. EDITOR Environment Variable Tests (~15 tests)
-- No EDITOR → defaults to joe
-- `EDITOR=vim/vi/nvim/neovim` → vim mappings
-- `EDITOR=emacs/emacs-nox` → emacs mappings
-- `EDITOR=code/code-insiders` → vscode mappings
-- `EDITOR=unknown` → fallback to joe
+### 4. Editcmd Tests (~60 tests)
+- Version flags, print/dry-run modes
+- EDITOR environment variable handling
+- Line positioning (-l and +NUM)
+- All 5 editor selections
+- Syntax detection integration
+- Error handling and combined options
+- Filenames with spaces, non-existent files
 
 ### 5. Edge Cases (~20 tests)
 - Dotfiles: `.bashrc`, `.vimrc`, `.gitignore`
 - Multiple extensions: `archive.tar.gz`, `script.min.js`
-- Non-existent files
-- Empty files
+- Non-existent files, empty files
 - Files with spaces in names
-- Binary detection
-- C++ file detection (`.cpp`, `.cc`, `.cxx`, `.hpp`)
-- Bash vs sh detection in vim
+- Binary detection, C++ file detection
 
-### 6. Batch Mode Tests (~5 tests)
-- Single file → no prefix
-- Multiple files → `filename: syntax` format
-
-### 7. Error Handling Tests (~5 tests)
-- No files specified
-- Invalid `-e` option
-- Unknown options
-- Help (`-h`/`--help`) exits successfully
-
-### 8. Library Mode Tests (~30 tests, bash only)
+### 6. Library Mode Tests (~20 tests)
 - Direct function calls: `filetype()`, `map_to_editor()`, `detect_editor_from_env()`
 - Tests bash script when sourced as library
-
-### 9. Parity Tests (~100 tests)
-- Verifies bash and Python produce **identical** output
-- Tests all extensions, shebangs, editors, and edge cases
-- Ensures implementations stay in sync
 
 ## Running Individual Test Suites
 
 ```bash
-# Run individual test suites
 ./test_bash.sh              # Bash implementation tests
-./test_python.py            # Python implementation tests
-./test_parity.sh            # Parity verification
+./test_editcmd.sh           # Editcmd CLI tests
 ./test_library_mode.sh      # Library mode tests
 
 # Setup fixtures manually
@@ -119,11 +100,8 @@ Step 1: Setting up test fixtures
 Running: Bash Implementation Tests
 ✓ Bash Implementation Tests PASSED
 
-Running: Python Implementation Tests
-✓ Python Implementation Tests PASSED
-
-Running: Parity Tests (Bash vs Python)
-✓ Parity Tests (Bash vs Python) PASSED
+Running: Editcmd Tests (Bash)
+✓ Editcmd Tests (Bash) PASSED
 
 Running: Library Mode Tests (Bash)
 ✓ Library Mode Tests (Bash) PASSED
@@ -132,11 +110,11 @@ Running: Library Mode Tests (Bash)
   FINAL TEST SUMMARY
 ======================================================================
 
-Test Suites Run:    4
-Suites Passed:      4
+Test Suites Run:    3
+Suites Passed:      3
 Suites Failed:      0
 
-Time: 8s
+Time: 3s
 ======================================================================
 
 All test suites passed! ✓
@@ -145,13 +123,12 @@ All test suites passed! ✓
 ## Test Statistics
 
 - **Total Fixtures**: 139 test files
-- **Total Test Assertions**: ~610
-- **Test Suites**: 4
-- **File Types Covered**: 46 syntax types
+- **Total Test Assertions**: ~299
+- **Test Suites**: 3
+- **File Types Covered**: 47 syntax types
 - **File Extensions Tested**: 80+
 - **Shebang Variants**: 30+
 - **Editors Tested**: 5 (joe, nano, vim, emacs, vscode)
-- **EDITOR Variants**: 13 (vim, vi, nvim, neovim, emacs, emacs-nox, code, code-insiders, nano, joe, unknown, etc.)
 
 ## CI/CD Integration
 
@@ -159,29 +136,20 @@ The test suite is designed for CI/CD:
 - Exit code 0 on success, non-zero on failure
 - Idempotent (can run multiple times)
 - Self-contained (generates own fixtures)
-- Fast execution (~6-10 seconds total)
+- Fast execution (~3-5 seconds total)
 - Summary reporting
 
 ## Test Framework
 
 - **Bash tests**: Custom assertion framework in `common.sh`
-- **Python tests**: pytest framework
 - **Output**: Colored PASS/FAIL with TAP-style reporting
 - **Summary**: Total/Pass/Fail counts with ASCII art
-
-## Notes
-
-- Some parity test differences are expected (help text formatting, error message wording)
-- Binary detection requires `file` command
-- EDITOR resolution uses `readlink -f` (GNU coreutils)
-- All tests run relative to `tests/` directory
 
 ## Maintenance
 
 To add new tests:
 1. Add fixtures in `setup_fixtures.sh`
-2. Add assertions to `test_bash.sh` and `test_python.py`
-3. Add parity check to `test_parity.sh` if applicable
-4. Run `./run_all_tests.sh` to verify
+2. Add assertions to `test_bash.sh`
+3. Run `./run_all_tests.sh` to verify
 
 #fin

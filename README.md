@@ -2,10 +2,9 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-Open--Technology--Foundation%2Ffiletype-blue?logo=github)](https://github.com/Open-Technology-Foundation/filetype)
 [![License](https://img.shields.io/badge/License-Open%20Source-green.svg)](https://github.com/Open-Technology-Foundation/filetype)
-[![Bash](https://img.shields.io/badge/Bash-4.0%2B-blue.svg)](https://www.gnu.org/software/bash/)
-[![Python](https://img.shields.io/badge/Python-3.6%2B-blue.svg)](https://www.python.org/)
+[![Bash](https://img.shields.io/badge/Bash-4.4%2B-blue.svg)](https://www.gnu.org/software/bash/)
 
-A dual-tool, dual-implementation suite for file type detection and smart editor launching.
+A dual-tool suite for file type detection and smart editor launching.
 
 ## Table of Contents
 
@@ -39,33 +38,31 @@ This project provides two complementary tools:
 - **`filetype`** - Detects file types and returns syntax names for editors
 - **`editcmd`** - Launches editors with automatic syntax highlighting and line positioning
 
-Both tools are available as Bash scripts and Python modules with identical functionality, sharing a common core library for zero code duplication.
+Both tools are implemented in a single Bash script using busybox-style `$0` dispatch, with `editcmd` as a symlink to `filetype`.
 
 ## Features
 
-- **Dual Implementation**: Choose between Bash script or Python module with identical behavior
 - **Multiple Detection Methods**:
   - File extension analysis
   - Shebang line parsing for executable scripts
   - MIME type detection
   - Binary file signature checking
-  - Content-based fallback analysis
 - **Editor Integration**: Generate ready-to-use editor launch commands with syntax highlighting
 - **Line Positioning**: Jump directly to specific line numbers when opening files in editors
-- **Library Mode**: Source as Bash function or import as Python module
+- **Library Mode**: Source as Bash functions in your scripts
 - **Safe Binary Handling**: Prevents accidental editing of binary files
 - **Zero External Dependencies**: Only uses standard system utilities
 
 ## Supported File Types
 
-Detects 40+ file types and returns editor-appropriate syntax names. Common types include:
+Detects 47 file types and returns editor-appropriate syntax names. Common types include:
 
-- **Shell scripts**: `sh`, `bash` (based on shebang or content analysis)
-- **Programming languages**: `python`, `c`, `cpp`, `js`, `php`, `ruby`, `perl`, `java`, `go`, `rust`
+- **Shell scripts**: `sh`, `csh`
+- **Programming languages**: `python`, `c`, `js`, `php`, `ruby`, `perl`, `java`, `go`, `rust`, `typescript`
 - **Web**: `html`, `css`, `xml`, `json`, `yaml`
-- **Markup**: `markdown`, `latex`, `rst`
-- **Config**: `ini`, `conf`, `toml`
-- **Other**: `sql`, `makefile`, `dockerfile`, `diff`, `text`, `binary`
+- **Markup**: `md`, `tex`
+- **Config**: `ini`, `conf`, `properties`
+- **Other**: `sql`, `diff`, `awk`, `sed`, `lua`, `text`, `binary`
 
 The exact syntax name returned depends on the editor specified (via `-e` flag):
 - **joe** (default): Base syntax names (`sh`, `python`, `c`, `js`, `json`, `md`)
@@ -80,15 +77,12 @@ The project uses a **shared library architecture** to eliminate code duplication
 
 ```
 filetype/
-├── filetype-lib.sh       # Bash core library (all detection logic)
-├── filetype_lib.py       # Python core library (all detection logic)
-├── filetype              # Bash CLI wrapper (detection only)
-├── filetype.py           # Python CLI wrapper (detection only)
-├── editcmd               # Bash CLI wrapper (editor launcher)
-└── editcmd.py            # Python CLI wrapper (editor launcher)
+├── filetype              # Bash: core library + CLI + editcmd mode (busybox-style)
+├── filetype-lib.sh       # Backward-compat stub (sources filetype)
+└── editcmd -> filetype   # Symlink: triggers editcmd CLI mode via $0 dispatch
 ```
 
-Both `filetype` and `editcmd` import from the same core libraries, ensuring:
+`filetype` serves triple roles — sourceable library, detection CLI, and editor launcher CLI. When invoked as `editcmd` (via symlink), it dispatches to editor launcher mode using `${0##*/}` (busybox-style). This ensures:
 - ✅ Zero code duplication
 - ✅ Consistent behavior across tools
 - ✅ Single source of truth for detection logic
@@ -122,14 +116,15 @@ This will copy all necessary files to `/usr/local/bin/` for system-wide access.
 If you prefer manual installation or need a custom location:
 
 ```bash
-# Copy all files to /usr/local/bin
-sudo cp filetype filetype.py editcmd editcmd.py \
-         filetype-lib.sh filetype_lib.py \
-         /usr/local/bin/
+# Copy files to /usr/local/bin
+sudo cp filetype filetype-lib.sh /usr/local/bin/
+
+# Create editcmd symlink
+sudo ln -sf filetype /usr/local/bin/editcmd
 
 # Set permissions
-sudo chmod 755 /usr/local/bin/{filetype,filetype.py,editcmd,editcmd.py}
-sudo chmod 644 /usr/local/bin/{filetype-lib.sh,filetype_lib.py}
+sudo chmod 755 /usr/local/bin/filetype
+sudo chmod 644 /usr/local/bin/filetype-lib.sh
 ```
 
 ### Alternative: Add to PATH
@@ -138,8 +133,6 @@ sudo chmod 644 /usr/local/bin/{filetype-lib.sh,filetype_lib.py}
 # Add directory to PATH in your ~/.bashrc or ~/.bash_profile
 export PATH="/path/to/filetype:$PATH"
 ```
-
-**Note**: The Python scripts (`filetype.py` and `editcmd.py`) are designed to find their library module (`filetype_lib.py`) in the same directory, so they work correctly when installed via copy to `/usr/local/bin/`.
 
 ## Usage
 
@@ -216,8 +209,6 @@ editcmd -e emacs -l 25 test.c   # Emacs at line 25
 
 ### Library Mode
 
-#### Bash Library
-
 ```bash
 # Source the script
 source /path/to/filetype
@@ -231,25 +222,6 @@ if [[ $(filetype "$file") == 'binary' ]]; then
   echo 'Cannot edit binary file'
   exit 1
 fi
-```
-
-#### Python Library
-
-```python
-# Import from the core library
-from filetype_lib import filetype
-
-# Detect file type
-result = filetype('somefile.py')
-print(result)  # Output: python
-
-# With metadata
-syntax, is_bash = filetype('script.sh', return_metadata=True)
-print(f"Type: {syntax}, Is Bash: {is_bash}")
-
-# Use in your code
-if filetype('myfile') == 'binary':
-    raise ValueError('Cannot process binary file')
 ```
 
 ## Command-Line Options
@@ -498,14 +470,12 @@ fi
 
 ## Library Usage
 
-Both tools can be used as libraries in your scripts.
-
-### Bash Library
+The `filetype` script can be sourced as a library in your bash scripts:
 
 ```bash
 #!/bin/bash
-# Source the core library
-source /path/to/filetype-lib.sh
+# Source the filetype script as a library
+source /path/to/filetype
 
 # Use detection functions
 for file in "$@"; do
@@ -527,40 +497,9 @@ cmd=$(build_editor_command 'vim' "$syntax" 'script.py' 42)
 echo "Would run: $cmd"
 ```
 
-### Python Library
-
-```python
-#!/usr/bin/env python3
-# Import from core library
-from filetype_lib import filetype, build_editor_command, map_to_editor
-import sys
-
-def process_file(filename):
-    # Detect file type
-    file_type, is_bash = filetype(filename, return_metadata=True)
-
-    if file_type == 'binary':
-        print(f"Skipping binary: {filename}", file=sys.stderr)
-        return
-
-    print(f"Processing {file_type} file: {filename}")
-    # ... your processing logic
-
-def build_edit_command(filename, line=0, editor='vim'):
-    # Build editor command programmatically
-    syntax, is_bash = filetype(filename, return_metadata=True)
-    syntax = map_to_editor(syntax, editor, filename, is_bash)
-    cmd = build_editor_command(editor, syntax, filename, line)
-    return cmd
-
-if __name__ == '__main__':
-    for filename in sys.argv[1:]:
-        process_file(filename)
-```
-
 ## Testing
 
-The project includes a comprehensive test suite with 340+ tests covering both implementations.
+The project includes a comprehensive test suite with 290+ tests.
 
 ### Running Tests
 
@@ -571,34 +510,23 @@ cd tests
 
 # Run specific test suite
 ./test_bash.sh           # Bash implementation tests
-./test_python.py         # Python implementation tests (requires pytest)
-./test_parity.sh         # Cross-implementation parity tests
+./test_editcmd.sh        # Editcmd CLI tests
 ./test_library_mode.sh   # Library mode tests
 ```
 
-### Test Environment Setup
-
-For Python tests, a virtual environment is used:
-
-```bash
-cd tests
-python3 -m venv .venv
-.venv/bin/pip install pytest
-.venv/bin/python test_python.py
-```
-
 The test suite includes:
-- Extension detection tests
+- Extension detection tests (80+ file types)
 - Shebang parsing tests
 - MIME type detection tests
 - Binary file detection tests
 - Edge cases (filenames with spaces, special characters)
 - Error handling tests
-- Cross-implementation parity tests
+- Editor mapping tests (all 5 editors)
+- Editcmd integration tests
 
 ## Error Handling
 
-Both implementations use consistent exit codes:
+Consistent exit codes:
 
 - `0` - Success
 - `1` - Error (missing file, binary file, failed operations)
@@ -620,39 +548,28 @@ editcmd -e <TAB>         # Shows: joe nano vim emacs vscode
 
 ## Requirements
 
-### Bash Implementation
-- Bash 4.0 or later
+- Bash 4.4 or later
 - `file` command (usually pre-installed)
-
-### Python Implementation
-- Python 3.6 or later
-- No external dependencies for library/CLI usage
-- `pytest` for running tests (optional, test-only)
 
 ## Project Structure
 
 ```
 filetype/
-├── filetype-lib.sh          # Bash core library (~400 lines)
-├── filetype_lib.py          # Python core library (~530 lines)
-├── filetype                 # Bash detection CLI (~120 lines)
-├── filetype.py              # Python detection CLI (~110 lines)
-├── editcmd                  # Bash launcher CLI (~115 lines)
-├── editcmd.py               # Python launcher CLI (~120 lines)
+├── filetype                 # Bash: core library + CLI + editcmd mode (~640 lines)
+├── filetype-lib.sh          # Backward-compat stub (sources filetype)
+├── editcmd -> filetype      # Symlink: triggers editcmd CLI mode
 ├── README.md                # This file
-├── .bash_completion         # Bash completion support
-└── tests/                   # Test suite (340+ tests)
+├── .bash_completion         # Bash completion support (filetype + editcmd)
+└── tests/                   # Test suite (290+ tests)
     ├── test_bash.sh
-    ├── test_python.py
-    ├── test_parity.sh
+    ├── test_editcmd.sh
     └── test_library_mode.sh
 ```
 
 **Key Design Principles:**
-- All detection logic lives in `*-lib.*` files
-- CLI wrappers are thin (~100 lines each)
-- Zero code duplication between bash and Python
-- Both languages share identical detection algorithms
+- `filetype` is library + CLI + editcmd (busybox-style `$0` dispatch)
+- Single source of truth for all detection logic
+- `editcmd` symlink triggers editor launcher mode via `${0##*/}`
 
 ## Contributing
 
@@ -666,12 +583,10 @@ Contributions are welcome! Please visit the [GitHub repository](https://github.c
 
 When modifying detection logic:
 
-1. **Edit Libraries First**: All changes go in `filetype-lib.sh` and `filetype_lib.py`
-2. **Maintain Parity**: Keep bash and Python detection identical
-3. **Test Thoroughly**: Run full test suite to ensure consistency
-4. **Binary Safety**: Never allow binary files to be misidentified as text
-5. **Exit Codes**: Maintain consistent exit codes across implementations
-6. **Update Both Tools**: If adding features, update both `filetype` and `editcmd` if applicable
+1. **Edit `filetype` First**: All detection logic lives in the `filetype` script
+2. **Test Thoroughly**: Run full test suite (`cd tests && ./run_all_tests.sh`)
+3. **Binary Safety**: Never allow binary files to be misidentified as text
+4. **Exit Codes**: Maintain consistent exit codes (0, 1, 22)
 
 ### Reporting Issues
 

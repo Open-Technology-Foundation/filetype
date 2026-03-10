@@ -7,15 +7,18 @@ declare -g FAIL_COUNT=0
 declare -g SKIP_COUNT=0
 
 # Color codes
-declare -g RED='\033[0;31m'
-declare -g GREEN='\033[0;32m'
-declare -g YELLOW='\033[1;33m'
-declare -g NC='\033[0m' # No Color
+if [[ -t 1 ]]; then
+  declare -g RED='\033[0;31m'
+  declare -g GREEN='\033[0;32m'
+  declare -g YELLOW='\033[1;33m'
+  declare -g NC='\033[0m'
+else
+  declare -g RED='' GREEN='' YELLOW='' NC=''
+fi
 
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FILETYPE_BASH="${SCRIPT_DIR}/../filetype"
-FILETYPE_PYTHON="${SCRIPT_DIR}/../filetype.py"
 
 # Assert functions
 assert_equals() {
@@ -154,10 +157,6 @@ run_filetype_bash() {
   "$FILETYPE_BASH" "$@"
 }
 
-# Run filetype Python version
-run_filetype_python() {
-  python3 "$FILETYPE_PYTHON" "$@"
-}
 
 # Export functions for use in sub-scripts
 export -f assert_equals
@@ -169,6 +168,5 @@ export -f skip_test
 export -f print_section
 export -f print_summary
 export -f run_filetype_bash
-export -f run_filetype_python
 
 #fin

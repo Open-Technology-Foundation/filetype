@@ -2,14 +2,14 @@
 # install.sh - Install filetype/editcmd tools to /usr/local/bin
 #
 # This script copies all necessary files to /usr/local/bin for system-wide access.
-# Both bash and Python versions are installed, along with their required library files.
+# Installs bash tools and library files to /usr/local/bin.
 
 set -euo pipefail
 shopt -s inherit_errexit
 
 # Script metadata
 VERSION='1.0.0'
-SCRIPT_PATH=$(readlink -en -- "$0" 2>/dev/null || realpath "$0")
+SCRIPT_PATH=$(realpath -- "$0")
 SCRIPT_DIR=${SCRIPT_PATH%/*}
 SCRIPT_NAME=${SCRIPT_PATH##*/}
 readonly -- VERSION SCRIPT_PATH SCRIPT_DIR SCRIPT_NAME
@@ -29,15 +29,16 @@ readonly -- RED GREEN YELLOW NC
 # Files to install
 declare -a EXECUTABLES=(
   'filetype'
-  'filetype.py'
-  'editcmd'
-  'editcmd.py'
 )
 readonly -a EXECUTABLES
 
+declare -A SYMLINKS=(
+  ['editcmd']='filetype'
+)
+readonly -A SYMLINKS
+
 declare -a LIBRARIES=(
-  'filetype-lib.sh'
-  'filetype_lib.py'
+  'filetype-lib.sh'   # Backward-compat stub (sources filetype)
 )
 readonly -a LIBRARIES
 
@@ -59,10 +60,10 @@ error() { >&2 _msg "$@"; }
 info() { >&2 _msg "$@"; }
 die() { (($# > 1)) && error "${@:2}"; exit "${1:-0}"; }
 
-# Check if file exists
+# Check if file exists (regular file or symlink)
 check_file() {
   local -- file="$1"
-  if [[ ! -f "$SCRIPT_DIR/$file" ]]; then
+  if [[ ! -f "$SCRIPT_DIR/$file" && ! -L "$SCRIPT_DIR/$file" ]]; then
     error "Missing: $file"
     return 1
   fi
@@ -77,8 +78,12 @@ verify_files() {
 
   echo 'Checking files...'
 
+  local -- link
   for file in "${EXECUTABLES[@]}" "${LIBRARIES[@]}"; do
     check_file "$file" || missing=1
+  done
+  for link in "${!SYMLINKS[@]}"; do
+    check_file "$link" || missing=1
   done
 
   if ((missing)); then
@@ -87,28 +92,19 @@ verify_files() {
   fi
 }
 
-# Install executable file
-install_executable() {
-  local -- file="$1"
+# Install a file with specified permissions
+install_file() {
+  local -- file="$1" mode="$2"
   [[ -L "$INSTALL_DIR/$file" ]] && rm "$INSTALL_DIR/$file"
   cp "$SCRIPT_DIR/$file" "$INSTALL_DIR/$file"
-  chmod 755 "$INSTALL_DIR/$file"
-  success "Installed: $INSTALL_DIR/$file"
-}
-
-# Install library file
-install_library() {
-  local -- file="$1"
-  [[ -L "$INSTALL_DIR/$file" ]] && rm "$INSTALL_DIR/$file"
-  cp "$SCRIPT_DIR/$file" "$INSTALL_DIR/$file"
-  chmod 644 "$INSTALL_DIR/$file"
+  chmod "$mode" "$INSTALL_DIR/$file"
   success "Installed: $INSTALL_DIR/$file"
 }
 
 # Main installation function
 main() {
   echo '======================================================================'
-  echo '  filetype/editcmd Installation'
+  echo "  filetype/editcmd Installation v${VERSION}"
   echo '======================================================================'
   echo ''
   echo "Installing to: $INSTALL_DIR"
@@ -131,12 +127,20 @@ main() {
   # Install executables
   local -- file
   for file in "${EXECUTABLES[@]}"; do
-    install_executable "$file"
+    install_file "$file" 755
   done
 
   # Install libraries
   for file in "${LIBRARIES[@]}"; do
-    install_library "$file"
+    install_file "$file" 644
+  done
+
+  # Install symlinks
+  local -- link target
+  for link in "${!SYMLINKS[@]}"; do
+    target="${SYMLINKS[$link]}"
+    ln -sf "$target" "$INSTALL_DIR/$link"
+    success "Installed: $INSTALL_DIR/$link -> $target"
   done
 
   echo ''
@@ -149,6 +153,11 @@ main() {
     echo "  - $file"
   done
   echo ''
+  echo 'Installed symlinks:'
+  for link in "${!SYMLINKS[@]}"; do
+    echo "  - $link -> ${SYMLINKS[$link]}"
+  done
+  echo ''
   echo 'Installed libraries:'
   for file in "${LIBRARIES[@]}"; do
     echo "  - $file"
@@ -156,9 +165,7 @@ main() {
   echo ''
   echo 'Verify installation:'
   echo '  filetype --version'
-  echo '  filetype.py --version'
   echo '  editcmd --version'
-  echo '  editcmd.py --version'
   echo ''
   echo 'Usage examples:'
   echo '  filetype script.py              # Detect file type'

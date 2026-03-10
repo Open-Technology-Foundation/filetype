@@ -375,6 +375,10 @@ assert_exit_code 1 "$exit_code" "No files → exit 1"
 $FILETYPE -e invalid fixtures/extensions/test.py 2>/dev/null && exit_code=$? || exit_code=$?
 assert_exit_code 22 "$exit_code" "Invalid -e value → exit 22 (EINVAL)"
 
+# Missing argument for -e
+$FILETYPE -e 2>/dev/null && exit_code=$? || exit_code=$?
+assert_exit_code 22 "$exit_code" "Missing -e argument → exit 22"
+
 # Unknown option
 $FILETYPE -x fixtures/extensions/test.py 2>/dev/null && exit_code=$? || exit_code=$?
 assert_exit_code 22 "$exit_code" "Unknown option → exit 22 (EINVAL)"
@@ -412,6 +416,79 @@ assert_exit_code 0 "$exit_code" "--version → exit 0"
 # Version format check (no word "version" in output)
 result=$($FILETYPE -V)
 assert_not_contains "$result" "version 1.0.0" "-V format: no 'version' word"
+
+# ========================================
+# 14. ERROR MESSAGE CONTENT
+# ========================================
+
+print_section "Error Message Content (die() format)"
+
+# Missing -e argument
+msg=$($FILETYPE -e 2>&1) || true
+assert_contains "$msg" "filetype: error:" "Missing -e stderr has 'filetype: error:' prefix"
+assert_contains "$msg" "requires an argument" "Missing -e stderr mentions 'requires an argument'"
+
+# Invalid editor
+msg=$($FILETYPE -e invalid file.py 2>&1) || true
+assert_contains "$msg" "Invalid editor" "Invalid editor error mentions 'Invalid editor'"
+
+# Unknown option
+msg=$($FILETYPE -z file.py 2>&1) || true
+assert_contains "$msg" "Unknown option" "Unknown option error mentions 'Unknown option'"
+
+# No files specified
+msg=$($FILETYPE 2>&1) || true
+assert_contains "$msg" "No files specified" "No files error mentions 'No files specified'"
+
+# ========================================
+# 15. END-OF-OPTIONS MARKER (--)
+# ========================================
+
+print_section "End-of-Options Marker (--)"
+
+# -- stops option parsing
+assert_equals "python" "$($FILETYPE -- fixtures/extensions/test.py)" "-- followed by file works"
+assert_equals "python" "$($FILETYPE -e joe -- fixtures/extensions/test.py)" "-e joe -- file works"
+
+# File starting with dash after --
+echo "test content" > fixtures/edge_cases/-dashfile.txt
+assert_equals "text" "$($FILETYPE -- fixtures/edge_cases/-dashfile.txt)" "-- allows dash-prefixed filename"
+
+# ========================================
+# 16. DIRECTORY DETECTION
+# ========================================
+
+print_section "Directory Detection"
+
+assert_equals "directory" "$($FILETYPE fixtures/edge_cases/test_directory)" "Directory → directory"
+assert_equals "directory" "$($FILETYPE .)" "Current dir → directory"
+
+# ========================================
+# 17. BATCH MODE EDGE CASES
+# ========================================
+
+print_section "Batch Mode Edge Cases"
+
+# 3+ files
+result=$($FILETYPE -e joe fixtures/extensions/test.py fixtures/extensions/test.sh fixtures/extensions/test.c)
+assert_contains "$result" "test.py: python" "Batch 3 files: python present"
+assert_contains "$result" "test.sh: sh" "Batch 3 files: sh present"
+assert_contains "$result" "test.c: c" "Batch 3 files: c present"
+
+# Batch with non-existent file
+result=$($FILETYPE -e joe fixtures/extensions/test.py nonexistent_file)
+assert_contains "$result" "nonexistent_file: text" "Batch: non-existent → text"
+
+# ========================================
+# 18. CASE INSENSITIVITY
+# ========================================
+
+print_section "Case Insensitivity (uppercase extensions)"
+
+echo "test" > fixtures/edge_cases/test.PY
+assert_equals "python" "$($FILETYPE fixtures/edge_cases/test.PY)" "Uppercase .PY → python"
+echo "test" > fixtures/edge_cases/test.SH
+assert_equals "sh" "$($FILETYPE fixtures/edge_cases/test.SH)" "Uppercase .SH → sh"
 
 # ========================================
 # SUMMARY

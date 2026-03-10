@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bash completion for filetype command
+# Bash completion for filetype and editcmd commands
 
 _filetype() {
     local cur prev words cword
@@ -17,7 +17,35 @@ _filetype() {
 
     case $cur in
         -*)
-            COMPREPLY=( $(compgen -W "-h --help -e --editor" -- "$cur") )
+            COMPREPLY=( $(compgen -W "-h --help -e --editor -V --version" -- "$cur") )
+            return 0
+            ;;
+    esac
+
+    # Complete with filenames
+    _filedir
+}
+
+_editcmd() {
+    local cur prev words cword
+    _init_completion || return
+
+    case $prev in
+        -h|--help|-V|--version)
+            return 0
+            ;;
+        -e|--editor)
+            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode" -- "$cur") )
+            return 0
+            ;;
+        -l|--line-no)
+            return 0
+            ;;
+    esac
+
+    case $cur in
+        -*)
+            COMPREPLY=( $(compgen -W "-h --help -e --editor -l --line-no -p --print --dry-run -V --version" -- "$cur") )
             return 0
             ;;
     esac
@@ -27,3 +55,6 @@ _filetype() {
 }
 
 complete -F _filetype filetype
+complete -F _editcmd editcmd
+
+#fin

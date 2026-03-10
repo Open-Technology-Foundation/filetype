@@ -206,6 +206,10 @@ cp /bin/ls "${FIXTURES_DIR}/binary/actual_binary" 2>/dev/null || true
 touch "${FIXTURES_DIR}/binary/binary_marker"
 ((FILES_CREATED+=1))
 
+# Image binary (PNG signature)
+printf '\x89PNG\r\n\x1a\n' > "${FIXTURES_DIR}/binary/fake_image.png"
+((FILES_CREATED+=1))
+
 # ========================================
 # 4. EDGE CASES
 # ========================================
@@ -224,6 +228,10 @@ echo "History entry" > "${FIXTURES_DIR}/edge_cases/.bash_history.txt"
 echo "Gzipped tar" > "${FIXTURES_DIR}/edge_cases/archive.tar.gz"
 echo "console.log('min');" > "${FIXTURES_DIR}/edge_cases/script.min.js"
 ((FILES_CREATED+=2))
+
+# Directory fixture (explicit test dir)
+mkdir -p "${FIXTURES_DIR}/edge_cases/test_directory"
+((FILES_CREATED+=1))
 
 # Non-existent files (will be referenced but not created)
 # These are tested by passing filenames that don't exist
