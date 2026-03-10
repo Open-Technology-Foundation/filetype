@@ -126,6 +126,90 @@ assert_equals "ps" "$($FILETYPE fixtures/extensions/test.eps)" "test.eps → ps"
 assert_equals "text" "$($FILETYPE fixtures/extensions/test.txt)" "test.txt → text"
 assert_equals "text" "$($FILETYPE fixtures/extensions/test.text)" "test.text → text"
 
+# Modern web
+assert_equals "jsx" "$($FILETYPE -e joe fixtures/extensions/test.jsx)" "test.jsx → jsx"
+assert_equals "vue" "$($FILETYPE fixtures/extensions/test.vue)" "test.vue → vue"
+assert_equals "svelte" "$($FILETYPE fixtures/extensions/test.svelte)" "test.svelte → svelte"
+assert_equals "graphql" "$($FILETYPE fixtures/extensions/test.graphql)" "test.graphql → graphql"
+assert_equals "graphql" "$($FILETYPE fixtures/extensions/test.gql)" "test.gql → graphql"
+
+# Modern compiled languages
+assert_equals "kotlin" "$($FILETYPE fixtures/extensions/test.kt)" "test.kt → kotlin"
+assert_equals "kotlin" "$($FILETYPE fixtures/extensions/test.kts)" "test.kts → kotlin"
+assert_equals "dart" "$($FILETYPE fixtures/extensions/test.dart)" "test.dart → dart"
+assert_equals "zig" "$($FILETYPE fixtures/extensions/test.zig)" "test.zig → zig"
+assert_equals "nim" "$($FILETYPE fixtures/extensions/test.nim)" "test.nim → nim"
+
+# Config/IaC
+assert_equals "toml" "$($FILETYPE fixtures/extensions/test.toml)" "test.toml → toml"
+assert_equals "nix" "$($FILETYPE fixtures/extensions/test.nix)" "test.nix → nix"
+assert_equals "terraform" "$($FILETYPE fixtures/extensions/test.tf)" "test.tf → terraform"
+assert_equals "terraform" "$($FILETYPE fixtures/extensions/test.tfvars)" "test.tfvars → terraform"
+
+# Build systems
+assert_equals "groovy" "$($FILETYPE fixtures/extensions/test.gradle)" "test.gradle → groovy"
+
+# Data formats
+assert_equals "protobuf" "$($FILETYPE fixtures/extensions/test.proto)" "test.proto → protobuf"
+assert_equals "csv" "$($FILETYPE fixtures/extensions/test.csv)" "test.csv → csv"
+assert_equals "tsv" "$($FILETYPE fixtures/extensions/test.tsv)" "test.tsv → tsv"
+assert_equals "jsonl" "$($FILETYPE fixtures/extensions/test.jsonl)" "test.jsonl → jsonl"
+assert_equals "jsonc" "$($FILETYPE fixtures/extensions/test.jsonc)" "test.jsonc → jsonc"
+
+# Binary (wasm)
+assert_equals "binary" "$($FILETYPE fixtures/extensions/test.wasm)" "test.wasm → binary"
+
+# ========================================
+# 1b. SPECIAL FILENAME TESTS
+# ========================================
+
+print_section "Special Filename Tests"
+
+# Dockerfile variants
+assert_equals "dockerfile" "$($FILETYPE fixtures/filenames/Dockerfile)" "Dockerfile → dockerfile"
+assert_equals "dockerfile" "$($FILETYPE fixtures/filenames/Dockerfile.dev)" "Dockerfile.dev → dockerfile"
+assert_equals "dockerfile" "$($FILETYPE fixtures/filenames/Dockerfile.prod)" "Dockerfile.prod → dockerfile"
+
+# Makefile variants
+assert_equals "makefile" "$($FILETYPE fixtures/filenames/Makefile)" "Makefile → makefile"
+assert_equals "makefile" "$($FILETYPE fixtures/filenames/GNUmakefile)" "GNUmakefile → makefile"
+
+# Other named files
+assert_equals "groovy" "$($FILETYPE fixtures/filenames/Jenkinsfile)" "Jenkinsfile → groovy"
+assert_equals "ruby" "$($FILETYPE fixtures/filenames/Vagrantfile)" "Vagrantfile → ruby"
+assert_equals "ruby" "$($FILETYPE fixtures/filenames/Rakefile)" "Rakefile → ruby"
+assert_equals "ruby" "$($FILETYPE fixtures/filenames/Gemfile)" "Gemfile → ruby"
+assert_equals "cmake" "$($FILETYPE fixtures/filenames/CMakeLists.txt)" "CMakeLists.txt → cmake"
+
+# .env variants
+assert_equals "conf" "$($FILETYPE fixtures/filenames/.env)" ".env → conf"
+assert_equals "conf" "$($FILETYPE fixtures/filenames/.env.local)" ".env.local → conf"
+assert_equals "conf" "$($FILETYPE fixtures/filenames/.env.production)" ".env.production → conf"
+
+# Shell dotfiles
+assert_equals "sh" "$($FILETYPE fixtures/filenames/.bashrc)" ".bashrc → sh"
+assert_equals "sh" "$($FILETYPE fixtures/filenames/.bash_profile)" ".bash_profile → sh"
+assert_equals "sh" "$($FILETYPE fixtures/filenames/.bash_aliases)" ".bash_aliases → sh"
+assert_equals "sh" "$($FILETYPE fixtures/filenames/.profile)" ".profile → sh"
+
+# Zsh dotfiles
+assert_equals "zsh" "$($FILETYPE fixtures/filenames/.zshrc)" ".zshrc → zsh"
+assert_equals "zsh" "$($FILETYPE fixtures/filenames/.zprofile)" ".zprofile → zsh"
+assert_equals "zsh" "$($FILETYPE fixtures/filenames/.zshenv)" ".zshenv → zsh"
+
+# Git dotfiles
+assert_equals "git" "$($FILETYPE fixtures/filenames/.gitconfig)" ".gitconfig → git"
+assert_equals "git" "$($FILETYPE fixtures/filenames/.gitignore)" ".gitignore → git"
+assert_equals "git" "$($FILETYPE fixtures/filenames/.gitattributes)" ".gitattributes → git"
+
+# Other dotfiles
+assert_equals "ini" "$($FILETYPE fixtures/filenames/.editorconfig)" ".editorconfig → ini"
+assert_equals "conf" "$($FILETYPE fixtures/filenames/.dockerignore)" ".dockerignore → conf"
+
+# Non-existent special filenames (detected by name alone)
+assert_equals "dockerfile" "$($FILETYPE Dockerfile)" "Dockerfile (non-existent) → dockerfile"
+assert_equals "makefile" "$($FILETYPE Makefile)" "Makefile (non-existent) → makefile"
+
 # ========================================
 # 2. SHEBANG TESTS
 # ========================================
@@ -169,6 +253,15 @@ assert_equals "lua" "$($FILETYPE fixtures/shebangs/lua2)" "#!/usr/bin/env lua �
 assert_equals "tcl" "$($FILETYPE fixtures/shebangs/tclsh1)" "#!/usr/bin/tclsh → tcl"
 assert_equals "tcl" "$($FILETYPE fixtures/shebangs/tclsh2)" "#!/usr/bin/env tclsh → tcl"
 assert_equals "tcl" "$($FILETYPE fixtures/shebangs/wish)" "#!/usr/bin/wish → tcl"
+
+# Zsh shebangs
+assert_equals "zsh" "$($FILETYPE fixtures/shebangs/zsh1)" "#!/bin/zsh → zsh"
+assert_equals "zsh" "$($FILETYPE fixtures/shebangs/zsh2)" "#!/usr/bin/env zsh → zsh"
+
+# Modern runtime shebangs
+assert_equals "js" "$($FILETYPE -e joe fixtures/shebangs/deno)" "#!/usr/bin/env deno → js"
+assert_equals "js" "$($FILETYPE -e joe fixtures/shebangs/bun)" "#!/usr/bin/env bun → js"
+assert_equals "typescript" "$($FILETYPE fixtures/shebangs/tsnode)" "#!/usr/bin/env ts-node → typescript"
 
 # ========================================
 # 3. EDITOR MAPPING TESTS - JOE (passthrough)
@@ -256,6 +349,37 @@ assert_equals "javascript" "$($FILETYPE -e vscode fixtures/extensions/test.js)" 
 assert_equals "markdown" "$($FILETYPE -e vscode fixtures/extensions/test.md)" "vscode: test.md → markdown"
 
 # ========================================
+# 7b. NEW TYPE EDITOR MAPPING TESTS
+# ========================================
+
+print_section "New Type Editor Mappings"
+
+# jsx across editors
+assert_equals "jsx" "$($FILETYPE -e joe fixtures/extensions/test.jsx)" "joe: test.jsx → jsx"
+assert_equals "javascript" "$($FILETYPE -e nano fixtures/extensions/test.jsx)" "nano: test.jsx → javascript"
+assert_equals "javascriptreact" "$($FILETYPE -e vim fixtures/extensions/test.jsx)" "vim: test.jsx → javascriptreact"
+assert_equals "js-jsx-mode" "$($FILETYPE -e emacs fixtures/extensions/test.jsx)" "emacs: test.jsx → js-jsx-mode"
+assert_equals "javascriptreact" "$($FILETYPE -e vscode fixtures/extensions/test.jsx)" "vscode: test.jsx → javascriptreact"
+
+# makefile across editors
+assert_equals "makefile" "$($FILETYPE -e joe fixtures/filenames/Makefile)" "joe: Makefile → makefile"
+assert_equals "make" "$($FILETYPE -e vim fixtures/filenames/Makefile)" "vim: Makefile → make"
+assert_equals "makefile-mode" "$($FILETYPE -e emacs fixtures/filenames/Makefile)" "emacs: Makefile → makefile-mode"
+
+# zsh across editors
+assert_equals "zsh" "$($FILETYPE -e joe fixtures/filenames/.zshrc)" "joe: .zshrc → zsh"
+assert_equals "sh-mode" "$($FILETYPE -e emacs fixtures/filenames/.zshrc)" "emacs: .zshrc → sh-mode"
+assert_equals "shellscript" "$($FILETYPE -e vscode fixtures/filenames/.zshrc)" "vscode: .zshrc → shellscript"
+
+# toml across editors
+assert_equals "toml" "$($FILETYPE -e joe fixtures/extensions/test.toml)" "joe: test.toml → toml"
+assert_equals "toml-mode" "$($FILETYPE -e emacs fixtures/extensions/test.toml)" "emacs: test.toml → toml-mode"
+
+# kotlin across editors
+assert_equals "kotlin" "$($FILETYPE -e joe fixtures/extensions/test.kt)" "joe: test.kt → kotlin"
+assert_equals "kotlin-mode" "$($FILETYPE -e emacs fixtures/extensions/test.kt)" "emacs: test.kt → kotlin-mode"
+
+# ========================================
 # 8. EDITOR ENVIRONMENT VARIABLE TESTS
 # ========================================
 
@@ -315,10 +439,10 @@ assert_equals "shellscript" "$result" "EDITOR=joe + -e vscode → vscode wins"
 
 print_section "Edge Cases"
 
-# Dotfiles without extension
-assert_equals "text" "$($FILETYPE fixtures/edge_cases/.bashrc)" ".bashrc → text"
+# Dotfiles without extension (special filename detection)
+assert_equals "sh" "$($FILETYPE fixtures/edge_cases/.bashrc)" ".bashrc → sh"
 assert_equals "text" "$($FILETYPE fixtures/edge_cases/.vimrc)" ".vimrc → text"
-assert_equals "text" "$($FILETYPE fixtures/edge_cases/.gitignore)" ".gitignore → text"
+assert_equals "git" "$($FILETYPE fixtures/edge_cases/.gitignore)" ".gitignore → git"
 
 # Dotfile with extension
 assert_equals "text" "$($FILETYPE fixtures/edge_cases/.bash_history.txt)" ".bash_history.txt → text"
@@ -399,12 +523,12 @@ print_section "Version Flag Tests"
 # -V flag
 result=$($FILETYPE -V)
 assert_contains "$result" "filetype" "-V outputs 'filetype'"
-assert_contains "$result" "1.0.0" "-V outputs version number"
+assert_contains "$result" "1.1.0" "-V outputs version number"
 
 # --version flag
 result=$($FILETYPE --version)
 assert_contains "$result" "filetype" "--version outputs 'filetype'"
-assert_contains "$result" "1.0.0" "--version outputs version number"
+assert_contains "$result" "1.1.0" "--version outputs version number"
 
 # Version exits successfully
 $FILETYPE -V >/dev/null && exit_code=$? || exit_code=$?
@@ -415,7 +539,7 @@ assert_exit_code 0 "$exit_code" "--version → exit 0"
 
 # Version format check (no word "version" in output)
 result=$($FILETYPE -V)
-assert_not_contains "$result" "version 1.0.0" "-V format: no 'version' word"
+assert_not_contains "$result" "version 1.1.0" "-V format: no 'version' word"
 
 # ========================================
 # 14. ERROR MESSAGE CONTENT
@@ -425,7 +549,7 @@ print_section "Error Message Content (die() format)"
 
 # Missing -e argument
 msg=$($FILETYPE -e 2>&1) || true
-assert_contains "$msg" "filetype: error:" "Missing -e stderr has 'filetype: error:' prefix"
+assert_contains "$msg" "filetype: ✗" "Missing -e stderr has 'filetype: ✗' prefix"
 assert_contains "$msg" "requires an argument" "Missing -e stderr mentions 'requires an argument'"
 
 # Invalid editor

@@ -22,11 +22,11 @@ print_section "Version Flag Tests"
 # Bash version
 result=$($EDITCMD -V)
 assert_contains "$result" "editcmd" "Bash: -V outputs 'editcmd'"
-assert_contains "$result" "1.0.0" "Bash: -V outputs version number"
+assert_contains "$result" "1.1.0" "Bash: -V outputs version number"
 
 result=$($EDITCMD --version)
 assert_contains "$result" "editcmd" "Bash: --version outputs 'editcmd'"
-assert_contains "$result" "1.0.0" "Bash: --version outputs version number"
+assert_contains "$result" "1.1.0" "Bash: --version outputs version number"
 
 # Version exits successfully
 $EDITCMD -V >/dev/null && exit_code=$? || exit_code=$?
@@ -279,12 +279,12 @@ print_section "Error Message Content (die() format)"
 
 # Missing -e argument
 msg=$($EDITCMD -e 2>&1) || true
-assert_contains "$msg" "editcmd: error:" "Missing -e stderr has 'editcmd: error:' prefix"
+assert_contains "$msg" "editcmd: ✗" "Missing -e stderr has 'editcmd: ✗' prefix"
 assert_contains "$msg" "requires an argument" "Missing -e stderr mentions argument required"
 
 # Missing -l argument
 msg=$($EDITCMD -l 2>&1) || true
-assert_contains "$msg" "editcmd: error:" "Missing -l stderr has prefix"
+assert_contains "$msg" "editcmd: ✗" "Missing -l stderr has prefix"
 
 # No file specified
 msg=$($EDITCMD 2>&1) || true
@@ -355,7 +355,68 @@ assert_contains "$result" "code" "Bash: vscode command generated"
 assert_contains "$result" "L10" "Bash: vscode L10 line positioning"
 
 # ========================================
-# 15. END-OF-OPTIONS IN EDITCMD
+# 15. NEW EDITOR TESTS (helix, micro, zed)
+# ========================================
+
+print_section "New Editors (helix, micro, zed)"
+
+# helix editor
+result=$($EDITCMD -p -e helix fixtures/extensions/test.py)
+assert_contains "$result" "hx" "Bash: -e helix uses hx"
+assert_contains "$result" "test.py" "Bash: -e helix includes filename"
+
+result=$($EDITCMD -p -e helix -l 10 fixtures/extensions/test.py)
+assert_contains "$result" "hx" "Bash: helix with line uses hx"
+assert_contains "$result" "+10" "Bash: helix +10 line positioning"
+
+# micro editor
+result=$($EDITCMD -p -e micro fixtures/extensions/test.py)
+assert_contains "$result" "micro" "Bash: -e micro uses micro"
+assert_contains "$result" "test.py" "Bash: -e micro includes filename"
+
+result=$($EDITCMD -p -e micro -l 10 fixtures/extensions/test.py)
+assert_contains "$result" "micro" "Bash: micro with line uses micro"
+assert_contains "$result" "+10" "Bash: micro +10 line positioning"
+
+# zed editor
+result=$($EDITCMD -p -e zed fixtures/extensions/test.py)
+assert_contains "$result" "zed" "Bash: -e zed uses zed"
+assert_contains "$result" "test.py" "Bash: -e zed includes filename"
+
+result=$($EDITCMD -p -e zed -l 10 fixtures/extensions/test.py)
+assert_contains "$result" "zed" "Bash: zed with line uses zed"
+assert_contains "$result" ":10" "Bash: zed :10 line positioning"
+
+# EDITOR environment variable for new editors
+result=$(EDITOR=hx $EDITCMD -p fixtures/extensions/test.py)
+assert_contains "$result" "hx" "Bash: EDITOR=hx uses helix"
+
+result=$(EDITOR=micro $EDITCMD -p fixtures/extensions/test.py)
+assert_contains "$result" "micro" "Bash: EDITOR=micro uses micro"
+
+result=$(EDITOR=zed $EDITCMD -p fixtures/extensions/test.py)
+assert_contains "$result" "zed" "Bash: EDITOR=zed uses zed"
+
+# ========================================
+# 16. SPECIAL FILENAME EDITCMD TESTS
+# ========================================
+
+print_section "Special Filename Detection in editcmd"
+
+# Dockerfile
+result=$($EDITCMD -p fixtures/filenames/Dockerfile)
+assert_contains "$result" "dockerfile" "Bash: Dockerfile gets dockerfile syntax"
+
+# Makefile (vim maps to 'make')
+result=$($EDITCMD -p -e vim fixtures/filenames/Makefile)
+assert_contains "$result" "make" "Bash: Makefile gets make syntax (vim)"
+
+# .bashrc
+result=$($EDITCMD -p -e vim fixtures/filenames/.bashrc)
+assert_contains "$result" "sh" "Bash: .bashrc gets sh syntax (vim)"
+
+# ========================================
+# 17. END-OF-OPTIONS IN EDITCMD
 # ========================================
 
 print_section "End-of-Options in editcmd"

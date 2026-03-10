@@ -11,7 +11,7 @@ echo "Setting up test fixtures..."
 
 # Clean old fixtures
 rm -rf "${FIXTURES_DIR}"
-mkdir -p "${FIXTURES_DIR}"/{extensions,shebangs,binary,edge_cases,cpp}
+mkdir -p "${FIXTURES_DIR}"/{extensions,shebangs,binary,edge_cases,cpp,filenames}
 
 FILES_CREATED=0
 
@@ -134,9 +134,96 @@ create_extension_file "cmd" "@echo off"
 create_extension_file "ps" "%!PS-Adobe"
 create_extension_file "eps" "%!PS-Adobe-3.0 EPSF-3.0"
 
+# Modern web
+create_extension_file "jsx" "const App = () => <div/>;"
+create_extension_file "vue" "<template><div/></template>"
+create_extension_file "svelte" "<script>let name = 'world';</script>"
+create_extension_file "graphql" "type Query { hello: String }"
+create_extension_file "gql" "query { hello }"
+
+# Modern compiled languages
+create_extension_file "kt" "fun main() { println(\"test\") }"
+create_extension_file "kts" "println(\"script\")"
+create_extension_file "dart" "void main() { print('test'); }"
+create_extension_file "zig" "const std = @import(\"std\");"
+create_extension_file "nim" "echo \"Hello\""
+
+# Config/IaC
+create_extension_file "toml" "[package]"
+create_extension_file "nix" "{ pkgs ? import <nixpkgs> {} }:"
+create_extension_file "tf" "resource \"aws_instance\" \"test\" {}"
+create_extension_file "tfvars" "instance_type = \"t2.micro\""
+
+# Build systems
+create_extension_file "gradle" "apply plugin: 'java'"
+
+# Data formats
+create_extension_file "proto" "syntax = \"proto3\";"
+create_extension_file "csv" "name,age,city"
+create_extension_file "tsv" "name\tage\tcity"
+create_extension_file "jsonl" '{"event":"test"}'
+create_extension_file "jsonc" '{ /* comment */ "test": true }'
+
+# Binary
+printf '\x00asm\x01\x00\x00\x00' > "${FIXTURES_DIR}/extensions/test.wasm"
+((FILES_CREATED+=1))
+
 # Plain text
 create_extension_file "txt" "Plain text file"
 create_extension_file "text" "Plain text file"
+
+# ========================================
+# 1b. SPECIAL FILENAME TESTS
+# ========================================
+
+# Dockerfile variants
+echo "FROM ubuntu:24.04" > "${FIXTURES_DIR}/filenames/Dockerfile"
+echo "FROM ubuntu:24.04" > "${FIXTURES_DIR}/filenames/Dockerfile.dev"
+echo "FROM ubuntu:24.04" > "${FIXTURES_DIR}/filenames/Dockerfile.prod"
+((FILES_CREATED+=3))
+
+# Makefile variants
+echo "all:" > "${FIXTURES_DIR}/filenames/Makefile"
+echo "all:" > "${FIXTURES_DIR}/filenames/GNUmakefile"
+((FILES_CREATED+=2))
+
+# Other build/config filenames
+echo "pipeline {}" > "${FIXTURES_DIR}/filenames/Jenkinsfile"
+echo "Vagrant.configure('2')" > "${FIXTURES_DIR}/filenames/Vagrantfile"
+echo "task :default" > "${FIXTURES_DIR}/filenames/Rakefile"
+echo "source 'https://rubygems.org'" > "${FIXTURES_DIR}/filenames/Gemfile"
+echo "cmake_minimum_required(VERSION 3.10)" > "${FIXTURES_DIR}/filenames/CMakeLists.txt"
+((FILES_CREATED+=5))
+
+# Dotfiles
+echo "DB_HOST=localhost" > "${FIXTURES_DIR}/filenames/.env"
+echo "DB_HOST=localhost" > "${FIXTURES_DIR}/filenames/.env.local"
+echo "DB_HOST=localhost" > "${FIXTURES_DIR}/filenames/.env.production"
+((FILES_CREATED+=3))
+
+# Shell dotfiles
+echo "# Bash config" > "${FIXTURES_DIR}/filenames/.bashrc"
+echo "# Bash profile" > "${FIXTURES_DIR}/filenames/.bash_profile"
+echo "# Bash aliases" > "${FIXTURES_DIR}/filenames/.bash_aliases"
+echo "# Profile" > "${FIXTURES_DIR}/filenames/.profile"
+((FILES_CREATED+=4))
+
+# Zsh dotfiles
+echo "# Zsh config" > "${FIXTURES_DIR}/filenames/.zshrc"
+echo "# Zsh profile" > "${FIXTURES_DIR}/filenames/.zprofile"
+echo "# Zsh env" > "${FIXTURES_DIR}/filenames/.zshenv"
+((FILES_CREATED+=3))
+
+# Git dotfiles
+echo "[user]" > "${FIXTURES_DIR}/filenames/.gitconfig"
+echo "*.pyc" > "${FIXTURES_DIR}/filenames/.gitignore"
+echo "*.txt text" > "${FIXTURES_DIR}/filenames/.gitattributes"
+((FILES_CREATED+=3))
+
+# Other dotfiles
+echo "root = true" > "${FIXTURES_DIR}/filenames/.editorconfig"
+echo "node_modules" > "${FIXTURES_DIR}/filenames/.dockerignore"
+((FILES_CREATED+=2))
 
 # ========================================
 # 2. SHEBANG TESTS - Files with no extension but various shebangs
@@ -190,6 +277,15 @@ create_shebang_file "tclsh1" "#!/usr/bin/tclsh"
 create_shebang_file "tclsh2" "#!/usr/bin/env tclsh"
 create_shebang_file "wish" "#!/usr/bin/wish"
 
+# Zsh
+create_shebang_file "zsh1" "#!/bin/zsh"
+create_shebang_file "zsh2" "#!/usr/bin/env zsh"
+
+# Modern runtimes
+create_shebang_file "deno" "#!/usr/bin/env deno"
+create_shebang_file "bun" "#!/usr/bin/env bun"
+create_shebang_file "tsnode" "#!/usr/bin/env ts-node"
+
 # ========================================
 # 3. BINARY FILES
 # ========================================
@@ -208,6 +304,18 @@ touch "${FIXTURES_DIR}/binary/binary_marker"
 
 # Image binary (PNG signature)
 printf '\x89PNG\r\n\x1a\n' > "${FIXTURES_DIR}/binary/fake_image.png"
+((FILES_CREATED+=1))
+
+# PE32 binary signature
+printf 'MZ\x90\x00' > "${FIXTURES_DIR}/binary/pe32_test"
+((FILES_CREATED+=1))
+
+# Gzip compressed file
+printf '\x1f\x8b\x08\x00' > "${FIXTURES_DIR}/binary/gzip_test.gz"
+((FILES_CREATED+=1))
+
+# WebAssembly binary
+printf '\x00asm\x01\x00\x00\x00' > "${FIXTURES_DIR}/binary/test.wasm"
 ((FILES_CREATED+=1))
 
 # ========================================

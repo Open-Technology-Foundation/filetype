@@ -2,7 +2,7 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-Open--Technology--Foundation%2Ffiletype-blue?logo=github)](https://github.com/Open-Technology-Foundation/filetype)
 [![License](https://img.shields.io/badge/License-Open%20Source-green.svg)](https://github.com/Open-Technology-Foundation/filetype)
-[![Bash](https://img.shields.io/badge/Bash-4.4%2B-blue.svg)](https://www.gnu.org/software/bash/)
+[![Bash](https://img.shields.io/badge/Bash-5.2%2B-blue.svg)](https://www.gnu.org/software/bash/)
 
 A dual-tool suite for file type detection and smart editor launching.
 
@@ -55,13 +55,15 @@ Both tools are implemented in a single Bash script using busybox-style `$0` disp
 
 ## Supported File Types
 
-Detects 47 file types and returns editor-appropriate syntax names. Common types include:
+Detects 67+ file types and returns editor-appropriate syntax names. Common types include:
 
-- **Shell scripts**: `sh`, `csh`
-- **Programming languages**: `python`, `c`, `js`, `php`, `ruby`, `perl`, `java`, `go`, `rust`, `typescript`
-- **Web**: `html`, `css`, `xml`, `json`, `yaml`
+- **Shell scripts**: `sh`, `csh`, `zsh`
+- **Programming languages**: `python`, `c`, `js`, `php`, `ruby`, `perl`, `java`, `go`, `rust`, `typescript`, `kotlin`, `dart`, `zig`, `nim`
+- **Web**: `html`, `css`, `xml`, `json`, `jsx`, `vue`, `svelte`, `graphql`
 - **Markup**: `md`, `tex`
-- **Config**: `ini`, `conf`, `properties`
+- **Config**: `ini`, `conf`, `properties`, `toml`, `nix`, `terraform`
+- **Data**: `csv`, `tsv`, `jsonl`, `jsonc`, `protobuf`, `yaml`
+- **Special filenames**: `Dockerfile`, `Makefile`, `Jenkinsfile`, `.bashrc`, `.env`, `.gitignore`, etc.
 - **Other**: `sql`, `diff`, `awk`, `sed`, `lua`, `text`, `binary`
 
 The exact syntax name returned depends on the editor specified (via `-e` flag):
@@ -70,6 +72,9 @@ The exact syntax name returned depends on the editor specified (via `-e` flag):
 - **vim**: Language-specific (`bash` for bash scripts, `cpp` for C++, `markdown` not `md`)
 - **emacs**: Mode names (`python-mode`, `c-mode`, `javascript-mode`, `markdown-mode`)
 - **vscode**: VSCode identifiers (`shellscript` not `sh`, `cpp` for C++)
+- **helix**: Auto-detect (tree-sitter based, no syntax flag needed)
+- **micro**: Auto-detect (no syntax flag needed)
+- **zed**: Auto-detect (tree-sitter based, uses `file:line` positioning)
 
 ## Architecture
 
@@ -78,7 +83,6 @@ The project uses a **shared library architecture** to eliminate code duplication
 ```
 filetype/
 ├── filetype              # Bash: core library + CLI + editcmd mode (busybox-style)
-├── filetype-lib.sh       # Backward-compat stub (sources filetype)
 └── editcmd -> filetype   # Symlink: triggers editcmd CLI mode via $0 dispatch
 ```
 
@@ -93,10 +97,8 @@ filetype/
 ### One-Liner Install
 
 ```bash
-git clone https://github.com/Open-Technology-Foundation/filetype.git && cd filetype && sudo ./install.sh
+git clone https://github.com/Open-Technology-Foundation/filetype.git && cd filetype && sudo make install
 ```
-
-This will clone the repository, enter the directory, and install all files to `/usr/local/bin/` for system-wide access.
 
 ### Quick Install (Step-by-Step)
 
@@ -105,26 +107,22 @@ This will clone the repository, enter the directory, and install all files to `/
 git clone https://github.com/Open-Technology-Foundation/filetype.git
 cd filetype
 
-# Run the installation script
-sudo ./install.sh
+# Install to /usr/local
+sudo make install
 ```
 
-This will copy all necessary files to `/usr/local/bin/` for system-wide access.
+This installs executables to `/usr/local/bin/`, manpages to `/usr/local/share/man/man1/`, and bash completion to `/etc/bash_completion.d/`.
 
 ### Manual Installation
 
 If you prefer manual installation or need a custom location:
 
 ```bash
-# Copy files to /usr/local/bin
-sudo cp filetype filetype-lib.sh /usr/local/bin/
+# Copy executable
+sudo install -m 755 filetype /usr/local/bin/filetype
 
 # Create editcmd symlink
 sudo ln -sf filetype /usr/local/bin/editcmd
-
-# Set permissions
-sudo chmod 755 /usr/local/bin/filetype
-sudo chmod 644 /usr/local/bin/filetype-lib.sh
 ```
 
 ### Alternative: Add to PATH
@@ -233,10 +231,11 @@ filetype [options] <file> [<file2> ...]
 
 Options:
   -e, --editor EDITOR   Return syntax name for specific editor
+  --                    End of options (allows filenames starting with -)
   -V, --version         Show version information
   -h, --help            Show help message
 
-Supported editors: joe, nano, vim, emacs, vscode
+Supported editors: joe, nano, vim, emacs, vscode, helix, micro, zed
 ```
 
 ### editcmd Options
@@ -253,7 +252,7 @@ Options:
   -V, --version         Show version information
   -h, --help            Show help message
 
-Supported editors: joe, nano, vim, emacs, vscode
+Supported editors: joe, nano, vim, emacs, vscode, helix, micro, zed
 ```
 
 ### Supported Editors
@@ -267,16 +266,20 @@ Supported editors: joe, nano, vim, emacs, vscode
 | vim (default) | `vim -c 'set filetype=TYPE' FILE` | `vim +42 -c 'set filetype=TYPE' FILE` |
 | emacs | `emacs -eval '(TYPE)' FILE` | `emacs +42 -eval '(TYPE)' FILE` |
 | vscode | `code --file-uri "...?language=TYPE"` | `code --file-uri "...?language=TYPE#L42"` |
+| helix | `hx FILE` | `hx +42 FILE` |
+| micro | `micro FILE` | `micro +42 FILE` |
+| zed | `zed FILE` | `zed FILE:42` |
 
 ## Detection Logic
 
 The detection follows this order:
 
-1. **Extension-based detection** - Checks common file extensions (.sh, .py, .php, .c, .txt)
-2. **Shebang parsing** - Reads first line for `#!/path/to/interpreter`
-3. **MIME type analysis** - Uses `file -b --mime-type` command
-4. **Binary detection** - Checks file signatures (ELF, PE32, Mach-O, etc.)
-5. **Default fallback** - Returns 'text' for unrecognized files
+1. **Special filename matching** - Recognizes files by name (`Dockerfile`, `Makefile`, `.bashrc`, `.env`, `.gitignore`, etc.)
+2. **Extension-based detection** - Checks common file extensions (.sh, .py, .php, .c, .txt, .toml, .kt, etc.)
+3. **Shebang parsing** - Reads first line for `#!/path/to/interpreter` (including zsh, deno, bun, ts-node)
+4. **MIME type analysis** - Uses `file -b --mime-type` command
+5. **Binary detection** - Checks file signatures (ELF, PE32, Mach-O, etc.)
+6. **Default fallback** - Returns 'text' for unrecognized files
 
 **Important**: Binary files are detected before text/* MIME patterns to prevent data corruption from accidental editing attempts.
 
@@ -499,7 +502,7 @@ echo "Would run: $cmd"
 
 ## Testing
 
-The project includes a comprehensive test suite with 290+ tests.
+The project includes a comprehensive test suite with 450+ assertions.
 
 ### Running Tests
 
@@ -515,13 +518,14 @@ cd tests
 ```
 
 The test suite includes:
-- Extension detection tests (80+ file types)
-- Shebang parsing tests
+- Extension detection tests (100+ file types)
+- Special filename detection tests (Dockerfile, Makefile, dotfiles)
+- Shebang parsing tests (including zsh, deno, bun, ts-node)
 - MIME type detection tests
 - Binary file detection tests
 - Edge cases (filenames with spaces, special characters)
 - Error handling tests
-- Editor mapping tests (all 5 editors)
+- Editor mapping tests (all 8 editors)
 - Editcmd integration tests
 
 ## Error Handling
@@ -536,31 +540,35 @@ Binary files are explicitly rejected by `editcmd` to prevent data corruption.
 
 ## Bash Completion
 
-Bash tab-completion is available via `.bash_completion`:
+Bash tab-completion is installed automatically by `make install` to `/etc/bash_completion.d/filetype`:
 
 ```bash
-source /path/to/filetype/.bash_completion
+# Automatically available after installation in new shell sessions
+filetype -e <TAB>        # Shows: joe nano vim emacs vscode helix micro zed
+editcmd -e <TAB>         # Shows: joe nano vim emacs vscode helix micro zed
 
-# Now you can tab-complete
-filetype -e <TAB>        # Shows: joe nano vim emacs vscode
-editcmd -e <TAB>         # Shows: joe nano vim emacs vscode
+# Or source manually
+source /path/to/filetype/.bash_completion
 ```
 
 ## Requirements
 
-- Bash 4.4 or later
+- Bash 5.2 or later
 - `file` command (usually pre-installed)
 
 ## Project Structure
 
 ```
 filetype/
-├── filetype                 # Bash: core library + CLI + editcmd mode (~640 lines)
-├── filetype-lib.sh          # Backward-compat stub (sources filetype)
+├── filetype                 # Bash: core library + CLI + editcmd mode (~700 lines)
 ├── editcmd -> filetype      # Symlink: triggers editcmd CLI mode
-├── README.md                # This file
 ├── .bash_completion         # Bash completion support (filetype + editcmd)
-└── tests/                   # Test suite (290+ tests)
+├── Makefile                 # Install/uninstall (sudo make install)
+├── filetype.1               # Manpage (also covers editcmd)
+├── INSTALL.md               # Installation guide
+├── LICENSE                   # License file
+├── README.md                # This file
+└── tests/                   # Test suite (450+ assertions)
     ├── test_bash.sh
     ├── test_editcmd.sh
     └── test_library_mode.sh
@@ -594,22 +602,6 @@ Please report bugs and feature requests on the [GitHub Issues](https://github.co
 
 ## License
 
-This is a utility library for file type detection and editor integration.
-
-See the [GitHub repository](https://github.com/Open-Technology-Foundation/filetype) for more information.
-
-## Version
-
-Current version: 1.0.0
-
-## Links
-
-- **GitHub Repository**: https://github.com/Open-Technology-Foundation/filetype
-- **Report Issues**: https://github.com/Open-Technology-Foundation/filetype/issues
-- **Open Technology Foundation**: https://github.com/Open-Technology-Foundation
-
----
-
-**Maintained by**: [Open Technology Foundation](https://github.com/Open-Technology-Foundation)
+See [LICENSE](LICENSE) for details.
 
 #fin

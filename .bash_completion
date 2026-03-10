@@ -10,7 +10,7 @@ _filetype() {
             return 0
             ;;
         -e|--editor)
-            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode" -- "$cur") )
+            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode helix micro zed" -- "$cur") )
             return 0
             ;;
     esac
@@ -35,7 +35,7 @@ _editcmd() {
             return 0
             ;;
         -e|--editor)
-            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode" -- "$cur") )
+            COMPREPLY=( $(compgen -W "joe nano vim emacs vscode helix micro zed" -- "$cur") )
             return 0
             ;;
         -l|--line-no)

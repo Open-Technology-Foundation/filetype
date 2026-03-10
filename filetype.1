@@ -1,0 +1,325 @@
+.\" filetype.1 - manpage for filetype/editcmd
+.\" Generated from filetype v1.1.0
+.TH FILETYPE 1 "2026-03-10" "filetype 1.1.0" "User Commands"
+.
+.SH NAME
+filetype \- determine file type and return editor-specific syntax name
+.br
+editcmd \- launch editor with correct syntax highlighting and line positioning
+.
+.SH SYNOPSIS
+.B filetype
+.RI [ options ]
+.RB [ \-\- ]
+.IR filename " ..."
+.br
+.B editcmd
+.RI [ options ]
+.IR filename
+.br
+.B source filetype
+&&
+.B filetype
+.IR filename
+.
+.SH DESCRIPTION
+.B filetype
+detects file types and returns syntax names suitable for editor syntax
+highlighting.
+It recognises 100+ file extensions, common special filenames
+(Dockerfile, Makefile, .bashrc, etc.), shebang lines, and MIME types.
+.PP
+.B editcmd
+is a symlink to
+.B filetype
+that triggers editor-launch mode via
+.B $0
+dispatch (busybox-style).
+It opens the specified file in the user's editor with automatic syntax
+highlighting and optional line positioning.
+.PP
+When
+.B filetype
+is
+.B source\fRd as a library, it exports four functions and the variable
+.B FILETYPE_VERSION
+without entering any CLI mode.
+.
+.SH OPTIONS
+.SS filetype options
+.TP
+.BR \-e ", " \-\-editor " " \fIEDITOR\fR
+Return syntax name for the specified editor.
+Supported editors:
+.BR joe ,
+.BR nano ,
+.BR vim ,
+.BR emacs ,
+.BR vscode ,
+.BR helix ,
+.BR micro ,
+.BR zed .
+Default: detected from
+.B $EDITOR
+environment variable, or
+.B joe
+if not set.
+.TP
+.B \-\-
+End of options.
+Allows filenames starting with
+.BR \- .
+.TP
+.BR \-V ", " \-\-version
+Show version information.
+.TP
+.BR \-h ", " \-\-help
+Show help message.
+.
+.SS editcmd options
+.TP
+.BR \-e ", " \-\-editor " " \fIEDITOR\fR
+Editor to use.
+Same supported editors as above.
+Default: detected from
+.BR $EDITOR ,
+or
+.B vim
+if not set.
+.TP
+.BR \-l ", " \-\-line\-no " " \fINUM\fR
+Jump to line
+.IR NUM .
+.TP
+.BI + NUM
+Jump to line
+.I NUM
+(vim-style shorthand).
+.TP
+.BR \-p ", " \-\-print ", " \-\-dry\-run
+Print the editor command without executing it.
+.TP
+.BR \-V ", " \-\-version
+Show version information.
+.TP
+.BR \-h ", " \-\-help
+Show help message.
+.
+.SH DETECTION ORDER
+.B filetype
+determines the file type using the following cascade:
+.IP 1. 4
+.B Special filename matching
+\(em Dockerfile, Makefile, .bashrc, .env, .gitignore, Jenkinsfile,
+Vagrantfile, CMakeLists.txt, etc.
+.IP 2.
+.B Extension matching
+\(em 100+ extensions mapped to syntax names
+(.sh \(-> sh, .py \(-> python, .js \(-> js, .cpp \(-> c, etc.)
+.IP 3.
+.B Directory detection
+\(em returns
+.BR directory .
+.IP 4.
+.B Non-existent file
+\(em returns
+.BR text .
+.IP 5.
+.B Shebang line inspection
+\(em reads the first line for #! patterns
+(#!/bin/bash \(-> sh, #!/usr/bin/env python3 \(-> python, etc.)
+.IP 6.
+.B MIME type analysis
+\(em via
+.BR file (1)
+command.
+.IP 7.
+.B Binary file detection
+\(em ELF, PE32, Mach-O, compiled, compressed, archive,
+and application/* MIME types.
+.IP 8.
+.B Default fallback
+\(em returns
+.BR text .
+.
+.SH EDITOR MAPPING
+The base syntax name returned by
+.BR filetype ()
+is mapped to editor-specific names by
+.BR map_to_editor ().
+.PP
+.TS
+allbox tab(|);
+lb lb lb lb lb lb
+l l l l l l.
+Base|joe|nano|vim|emacs|vscode
+sh|sh|sh|sh/bash|sh-mode|shellscript
+python|python|python|python|python-mode|python
+c|c|c|c|c-mode|c
+c (C++)|c|c|cpp|c++-mode|cpp
+js|js|javascript|javascript|javascript-mode|javascript
+jsx|jsx|jsx|javascriptreact|js-jsx-mode|javascriptreact
+md|md|markdown|markdown|markdown-mode|markdown
+diff|diff|patch|diff|diff-mode|diff
+makefile|makefile|makefile|make|makefile-mode|makefile
+zsh|zsh|zsh|zsh|sh-mode|shellscript
+.TE
+.PP
+.BR helix ", " micro ", and " zed
+use syntax passthrough (tree-sitter auto-detection).
+.
+.SH LIBRARY USAGE
+When sourced, the following functions are exported:
+.TP
+.BI filetype " filename"
+Returns the base syntax name for
+.IR filename .
+.TP
+.B detect_editor_from_env
+Returns the editor type from
+.BR $EDITOR
+(default:
+.BR joe ).
+.TP
+.BI map_to_editor " syntax" " [filename]"
+Maps a base syntax name to an editor-specific name.
+Uses
+.B $EDITOR_TYPE
+if set, otherwise calls
+.BR detect_editor_from_env .
+.TP
+.BI build_editor_command " editor syntax filename" " [line_no]"
+Generates a full editor launch command string.
+Returns non-zero for binary files and directories.
+.PP
+Example:
+.PP
+.RS
+.nf
+source filetype
+syntax=$(filetype "script.py")
+echo "$syntax"                  # python
+cmd=$(build_editor_command vim python script.py 42)
+echo "$cmd"                     # vim +42 -c 'set filetype=python' script.py
+.fi
+.RE
+.
+.SH ENVIRONMENT
+.TP
+.B EDITOR
+Used to auto-detect the editor type.
+.B filetype
+defaults to
+.B joe
+when unset;
+.B editcmd
+defaults to
+.BR vim .
+.TP
+.B EDITOR_TYPE
+When set, overrides auto-detection in
+.BR map_to_editor ().
+.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Error (missing file argument, binary file, directory for editcmd).
+.TP
+.B 22
+Invalid argument (EINVAL: bad option, invalid editor name).
+.
+.SH EXAMPLES
+.SS filetype
+.nf
+filetype script.sh                  # sh
+filetype -e nano app.js             # javascript
+filetype -e vim README.md           # markdown
+filetype -e emacs program.py        # python-mode
+filetype -e vscode file.sh          # shellscript
+filetype -e vim file1.sh file2.js   # file1.sh: bash
+                                    # file2.js: javascript
+filetype /bin/ls                    # binary
+filetype /tmp                       # directory
+filetype -- -oddname.py             # python
+.fi
+.SS editcmd
+.nf
+editcmd script.py                   # Open with auto-detected syntax
+editcmd -l 42 script.py             # Jump to line 42
+editcmd +42 script.py               # Vim-style: jump to line 42
+editcmd -e nano script.py           # Use nano
+editcmd --dry-run script.py         # Print command only
+editcmd +100 -e vim test.c          # Multiple options
+.fi
+.SS Shell integration
+.nf
+# Quick edit function
+edit() {
+  local syntax
+  syntax=$(filetype "$1")
+  joe -syntax "$syntax" "$1"
+}
+
+# Jump to linter error
+error_line=$(pylint script.py | grep -oP 'line \eK\ed+' | head -1)
+editcmd -l "$error_line" script.py
+.fi
+.
+.SH FILES
+.TP
+.I /usr/local/bin/filetype
+Installed executable.
+.TP
+.I /usr/local/bin/editcmd
+Symlink to
+.IR filetype .
+.TP
+.I /etc/bash_completion.d/filetype
+Bash tab-completion for both commands.
+.
+.SH SUPPORTED FILE TYPES
+Over 100 extensions are recognised, including:
+.PP
+.B Shell:
+sh, bash, csh, tcsh, zsh
+.br
+.B Scripting:
+py, pl, pm, rb, php, awk, sed, lua, tcl
+.br
+.B Web:
+js, mjs, jsx, ts, tsx, htm, html, css, json, xml, vue, svelte, graphql
+.br
+.B Compiled:
+c, cpp, cc, cxx, h, hpp, java, go, rs, cs, swift, scala, d
+.br
+.B Functional:
+hs, lhs, erl, hrl, ex, exs, lisp, ml, mli
+.br
+.B Data/Config:
+yaml, yml, ini, conf, cfg, toml, properties, csv, tsv, jsonl, jsonc, proto
+.br
+.B Markup:
+md, markdown, tex, sty
+.br
+.B Infrastructure:
+tf, tfvars, nix, gradle
+.br
+.B Other:
+sql, diff, patch, r, prolog, pascal, fortran, cobol, verilog, vhdl, kotlin,
+dart, zig, nim
+.
+.SH SEE ALSO
+.BR file (1),
+.BR joe (1),
+.BR nano (1),
+.BR vim (1),
+.BR emacs (1),
+.BR code (1)
+.
+.SH AUTHORS
+Biksu Okusi <biksu@okusi.id>
+.br
+Okusi Group \(em https://okusi.id

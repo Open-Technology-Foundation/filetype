@@ -2,7 +2,7 @@
 # filetype - Determine file type and return editor-specific syntax name
 
 # Version (exported so sourcing scripts can access it)
-declare -x FILETYPE_VERSION='1.0.0'
+declare -x FILETYPE_VERSION='1.1.0'
 
 # Detect editor from EDITOR environment variable
 detect_editor_from_env() {
@@ -18,12 +18,15 @@ detect_editor_from_env() {
 
   # Map common editor names to supported types
   case $editor_name in
-    joe|jstar|jj)           echo 'joe' ;;
-    nano)                   echo 'nano' ;;
-    vim|vi|nvim|neovim)     echo 'vim' ;;
-    emacs|emacs-nox)        echo 'emacs' ;;
-    code|code-insiders)     echo 'vscode' ;;
-    *)                      echo 'joe' ;;  # Default fallback
+    joe|jstar|jj)           echo joe ;;
+    nano)                   echo nano ;;
+    vim|vi|nvim|neovim)     echo vim ;;
+    emacs|emacs-nox)        echo emacs ;;
+    code|code-insiders)     echo vscode ;;
+    helix|hx)               echo helix ;;
+    micro)                  echo micro ;;
+    zed)                    echo zed ;;
+    *)                      echo joe ;;  # Default fallback
   esac
 }
 declare -fx detect_editor_from_env
@@ -37,16 +40,19 @@ map_to_editor() {
   case $editor in
     nano)
       case $syntax in
-        js)       echo 'javascript' ;;
-        md)       echo 'markdown' ;;
-        diff)     echo 'patch' ;;
+        js)       echo javascript ;;
+        jsx)      echo javascript ;;
+        md)       echo markdown ;;
+        diff)     echo patch ;;
         *)        echo "$syntax" ;;
       esac
       ;;
     vim)
       case $syntax in
-        js)       echo 'javascript' ;;
-        md)       echo 'markdown' ;;
+        js)       echo javascript ;;
+        jsx)      echo javascriptreact ;;
+        md)       echo markdown ;;
+        makefile) echo make ;;
         sh)
           # Check if file has bash shebang
           if [[ -f $filename ]]; then
@@ -54,13 +60,13 @@ map_to_editor() {
             if read -r first_line < "$filename" 2>/dev/null; then
               case "$first_line" in
                 '#!/bin/bash'|'#!/usr/bin/env bash'|'#!/usr/bin/bash')
-                  echo 'bash'
+                  echo bash
                   return 0
                   ;;
               esac
             fi
           fi
-          echo 'sh'
+          echo sh
           ;;
         c)        [[ $filename == *.cpp || $filename == *.cc || $filename == *.cxx || $filename == *.hpp ]] && echo 'cpp' || echo 'c' ;;
         *)        echo "$syntax" ;;
@@ -69,26 +75,34 @@ map_to_editor() {
     emacs)
       case $syntax in
         sh|csh)   echo "${syntax}-mode" ;;
+        zsh)      echo sh-mode ;;
         c)
           [[ $filename == *.cpp || $filename == *.cc || $filename == *.cxx || $filename == *.hpp ]] && echo 'c++-mode' || echo 'c-mode'
           ;;
-        js)       echo 'javascript-mode' ;;
-        md)       echo 'markdown-mode' ;;
-        xml)      echo 'nxml-mode' ;;
-        diff)     echo 'diff-mode' ;;
+        js)       echo javascript-mode ;;
+        jsx)      echo js-jsx-mode ;;
+        md)       echo markdown-mode ;;
+        xml)      echo nxml-mode ;;
+        diff)     echo diff-mode ;;
         text|binary|directory) echo "$syntax" ;;
         *)        echo "${syntax}-mode" ;;
       esac
       ;;
     vscode)
       case $syntax in
-        sh)       echo 'shellscript' ;;
-        c)        [[ $filename == *.cpp || $filename == *.cc || $filename == *.cxx || $filename == *.hpp ]] && echo 'cpp' || echo 'c' ;;
-        js)       echo 'javascript' ;;
-        md)       echo 'markdown' ;;
-        csh)      echo 'shellscript' ;;
+        sh)       echo shellscript ;;
+        zsh)      echo shellscript ;;
+        c)        [[ $filename == *.cpp || $filename == *.cc || $filename == *.cxx || $filename == *.hpp ]] && echo cpp || echo c ;;
+        js)       echo javascript ;;
+        jsx)      echo javascriptreact ;;
+        md)       echo markdown ;;
+        csh)      echo shellscript ;;
         *)        echo "$syntax" ;;
       esac
+      ;;
+    helix|micro|zed)
+      # Auto-detect editors: syntax passthrough (not used in command)
+      echo "$syntax"
       ;;
     joe|*)
       echo "$syntax"
@@ -106,11 +120,11 @@ build_editor_command() {
 
   # Handle binary files and directories - don't generate edit commands
   if [[ $syntax == binary ]]; then
-    >&2 echo "error: Cannot edit binary file ${filename@Q}"
+    >&2 echo "${FUNCNAME[1]}: ✗ Cannot edit binary file ${filename@Q}"
     return 1
   fi
   if [[ $syntax == directory ]]; then
-    >&2 echo "error: Cannot edit directory ${filename@Q}"
+    >&2 echo "${FUNCNAME[1]}: ✗ Cannot edit directory ${filename@Q}"
     return 1
   fi
 
@@ -158,6 +172,27 @@ build_editor_command() {
         printf 'code --file-uri "vscode-file://vscode-app%s?language=%s"' "$abs_path" "$syntax"
       fi
       ;;
+    helix)
+      if ((line_no > 0)); then
+        printf 'hx +%d %q' "$line_no" "$filename"
+      else
+        printf 'hx %q' "$filename"
+      fi
+      ;;
+    micro)
+      if ((line_no > 0)); then
+        printf 'micro +%d %q' "$line_no" "$filename"
+      else
+        printf 'micro %q' "$filename"
+      fi
+      ;;
+    zed)
+      if ((line_no > 0)); then
+        printf 'zed %q:%d' "$filename" "$line_no"
+      else
+        printf 'zed %q' "$filename"
+      fi
+      ;;
     *)
       if ((line_no)); then
         printf 'joe +%d -syntax %s %q' "$line_no" "$syntax" "$filename"
@@ -174,8 +209,29 @@ filetype() {
   local -- filename=$1
   local -- extension
 
+  # Special filename detection (before extension check)
+  # Many important files have no extension but are identifiable by name
+  local -- _basename
+  _basename=${filename##*/}
+  case ${_basename,,} in
+    dockerfile|dockerfile.*)     echo dockerfile; return 0 ;;
+    makefile|gnumakefile)        echo makefile; return 0 ;;
+    jenkinsfile)                 echo groovy; return 0 ;;
+    vagrantfile|rakefile|gemfile) echo ruby; return 0 ;;
+    cmakelists.txt)              echo cmake; return 0 ;;
+    .env|.env.*)                 echo conf; return 0 ;;
+    .bashrc|.bash_profile|.bash_aliases|.profile|.bash_logout)
+                                 echo sh; return 0 ;;
+    .zshrc|.zprofile|.zshenv|.zlogout)
+                                 echo zsh; return 0 ;;
+    .gitconfig|.gitignore|.gitattributes|.gitmodules)
+                                 echo git; return 0 ;;
+    .editorconfig)               echo ini; return 0 ;;
+    .dockerignore)               echo conf; return 0 ;;
+  esac
+
   # Extract text after last dot as extension
-  # For dotfiles like .bashrc, this yields 'bashrc' — not a recognized
+  # For dotfiles like .vimrc, this yields 'vimrc' — not a recognized
   # extension, so detection falls through to shebang/MIME analysis
   extension=${filename##*.}
 
@@ -248,6 +304,36 @@ filetype() {
       bat|cmd)                echo batch; return 0 ;;
       ps|eps)                 echo ps; return 0 ;;
 
+      # Modern web
+      jsx)                    echo jsx; return 0 ;;
+      vue)                    echo vue; return 0 ;;
+      svelte)                 echo svelte; return 0 ;;
+      graphql|gql)            echo graphql; return 0 ;;
+
+      # Modern compiled languages
+      kt|kts)                 echo kotlin; return 0 ;;
+      dart)                   echo dart; return 0 ;;
+      zig)                    echo zig; return 0 ;;
+      nim)                    echo nim; return 0 ;;
+
+      # Config/IaC
+      toml)                   echo toml; return 0 ;;
+      nix)                    echo nix; return 0 ;;
+      tf|tfvars)              echo terraform; return 0 ;;
+
+      # Build systems
+      gradle)                 echo groovy; return 0 ;;
+
+      # Data formats
+      proto)                  echo protobuf; return 0 ;;
+      csv)                    echo csv; return 0 ;;
+      tsv)                    echo tsv; return 0 ;;
+      jsonl)                  echo jsonl; return 0 ;;
+      jsonc)                  echo jsonc; return 0 ;;
+
+      # Binary
+      wasm)                   echo binary; return 0 ;;
+
       # Plain text
       txt|text)               echo text; return 0 ;;
     esac
@@ -255,13 +341,13 @@ filetype() {
 
   # No recognised extension; check for directory or non-existent file
   # before falling through to shebang/MIME analysis
-  [[ ! -d "$filename" ]] || { echo 'directory'; return 0; }
-  [[ -f "$filename" ]] || { echo 'text'; return 0; }
+  [[ ! -d "$filename" ]] || { echo directory; return 0; }
+  [[ -f "$filename" ]] || { echo text; return 0; }
 
   # File type not determined from extension
   # Attempt to determine from #!shebang
   local -- first_line
-  if ! read -r first_line < "$filename" 2>/dev/null; then
+  if ! read -r -t 1 first_line < "$filename" 2>/dev/null; then
     first_line=''
   fi
   case $first_line in
@@ -272,6 +358,8 @@ filetype() {
         echo sh; return 0 ;;
     '#!/bin/csh'|'#!/usr/bin/env csh'|'#!/bin/tcsh'|'#!/usr/bin/env tcsh')
         echo csh; return 0 ;;
+    '#!/bin/zsh'|'#!/usr/bin/env zsh'|'#!/usr/bin/zsh')
+        echo zsh; return 0 ;;
 
     # Scripting languages
     '#!/usr/bin/python'*|"#!/usr/bin/env python"*)
@@ -284,8 +372,10 @@ filetype() {
         echo php; return 0 ;;
 
     # Web/scripting utilities
-    "#!/usr/bin/node"*|"#!/usr/bin/env node"*)
+    "#!/usr/bin/node"*|"#!/usr/bin/env node"*|"#!/usr/bin/env deno"*|"#!/usr/bin/env bun"*)
         echo js; return 0 ;;
+    "#!/usr/bin/env ts-node"*)
+        echo typescript; return 0 ;;
     "#!/usr/bin/awk"*|"#!/usr/bin/env awk"*|"#!/usr/bin/gawk"*)
         echo awk; return 0 ;;
     "#!/usr/bin/sed"*|"#!/usr/bin/env sed"*)
@@ -337,18 +427,18 @@ filetype() {
   if [[ $file_type =~ ^(ELF|PE32|Mach-O|executable) ]] || \
      [[ $file_type =~ (compiled|compressed|archive) ]] || \
      [[ $file_mime_type =~ ^(application/|image/|audio/|video/) ]]; then
-    echo 'binary'
+    echo binary
     return 0
   fi
 
   # Catch-all for text (after binary check)
   if [[ $file_mime_type =~ ^text/ ]]; then
-    echo 'text'
+    echo text
     return 0
   fi
 
   # If we get here, assume 'text'
-  echo 'text'
+  echo text
   return 0
 }
 declare -fx filetype
@@ -363,9 +453,9 @@ shopt -s inherit_errexit extglob nullglob
 
 declare -r SCRIPT_NAME=${0##*/}
 
-die() { local -i rc=$1; shift; (($#)) && >&2 printf '%s\n' "$SCRIPT_NAME: error: $*"; exit "$rc"; }
-require_arg() { (($# > 1)) || die 22 "Option ${1@Q} requires an argument"; }
-validate_editor() { [[ $1 =~ ^(joe|nano|vim|emacs|vscode)$ ]] || die 22 "Invalid editor ${1@Q}. Must be: joe, nano, vim, emacs, or vscode"; }
+die() { (($# < 2)) || >&2 printf '%s\n' "$SCRIPT_NAME: ✗ ${*:2}"; exit "${1:-0}"; }
+noarg() { (($# > 1)) || die 22 "Option ${1@Q} requires an argument"; }
+validate_editor() { [[ $1 =~ ^(joe|nano|vim|emacs|vscode|helix|micro|zed)$ ]] || die 22 "Invalid editor ${1@Q}. Must be: joe, nano, vim, emacs, vscode, helix, micro, or zed"; }
 
 show_help() {
   cat <<HELP
@@ -378,7 +468,7 @@ Usage:
 
 Options:
  -e, --editor EDITOR   Return syntax name for specified editor
-                       Supported: joe, nano, vim, emacs, vscode
+                       Supported: joe, nano, vim, emacs, vscode, helix, micro, zed
                        Default: Detects from \$EDITOR environment variable,
                                 or 'joe' if not set
  --                    End of options (allows filenames starting with -)
@@ -397,13 +487,14 @@ Output:
  vscode:        shellscript, python, c/cpp, javascript, json, markdown, diff, etc.
 
 Detection Order:
- 1. Extension matching (.sh → sh, .py → python, etc.)
- 2. Directory detection → 'directory'
- 3. Non-existent file (no extension match) → 'text'
- 4. Shebang line inspection (#!/bin/bash → sh, etc.)
- 5. MIME type analysis via file(1) command
- 6. Binary file detection (ELF, PE32, Mach-O, media files)
- 7. Default to 'text' for unrecognized text files
+ 1. Special filename matching (Dockerfile, Makefile, .bashrc, etc.)
+ 2. Extension matching (.sh → sh, .py → python, etc.)
+ 3. Directory detection → 'directory'
+ 4. Non-existent file (no extension match) → 'text'
+ 5. Shebang line inspection (#!/bin/bash → sh, etc.)
+ 6. MIME type analysis via file(1) command
+ 7. Binary file detection (ELF, PE32, Mach-O, media files)
+ 8. Default to 'text' for unrecognized text files
 
 Examples:
  filetype script.sh                  # Returns: sh (joe default)
@@ -447,7 +538,7 @@ Usage:
   editcmd [options] <filename>
 
 Options:
-  -e, --editor EDITOR   Editor to use (joe, nano, vim, emacs, vscode)
+  -e, --editor EDITOR   Editor to use (joe, nano, vim, emacs, vscode, helix, micro, zed)
                         Default: Detects from \$EDITOR environment variable,
                                  or 'vim' if not set
   -l, --line-no NUM     Jump to line NUM
@@ -480,148 +571,148 @@ HELP
 }
 
 case $SCRIPT_NAME in
-editcmd)
-  # -- editcmd CLI mode --
-  declare -- editor_type=''
-  declare -i line_no=0
-  declare -i dry_run=0
-  declare -- filename=''
+  editcmd)
+    # -- editcmd CLI mode --
+    declare -- editor_type=''
+    declare -i line_no=0
+    declare -i dry_run=0
+    declare -- filename=''
 
-  while (($#)); do case $1 in
-    -h|--help)
-      show_editcmd_help
-      exit 0
-      ;;
-    -V|--version)
-      echo "editcmd $FILETYPE_VERSION"
-      exit 0
-      ;;
-    -e|--editor)
-      require_arg "$@"
-      shift
-      editor_type="$1"
-      validate_editor "$editor_type"
-      ;;
-    -l|--line-no)
-      require_arg "$@"
-      shift
-      line_no=$1
-      ((line_no > -1)) || die 1 "Line number must be non-negative"
-      ;;
-    -p|--print|--dry-run)
-      dry_run=1
-      ;;
-    +[0-9]*)  # Vim-style +NUM
-      line_no=${1:1}
-      ;;
-    -[hVelp]?*)
-      set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
-    -*)
-      die 22 "Unknown option ${1@Q}"
-      ;;
-    *)
-      if [[ -z $filename ]]; then
-        filename="$1"
-      else
-        die 1 "Multiple filenames not supported. Use one file at a time."
+    while (($#)); do case $1 in
+      -h|--help)
+        show_editcmd_help
+        exit 0
+        ;;
+      -V|--version)
+        echo "editcmd $FILETYPE_VERSION"
+        exit 0
+        ;;
+      -e|--editor)
+        noarg "$@"
+        shift
+        editor_type="$1"
+        validate_editor "$editor_type"
+        ;;
+      -l|--line-no)
+        noarg "$@"
+        shift
+        line_no=$1
+        ((line_no > -1)) || die 1 'Line number must be non-negative'
+        ;;
+      -p|--print|--dry-run)
+        dry_run=1
+        ;;
+      +[0-9]*)  # Vim-style +NUM
+        line_no=${1:1}
+        ;;
+      -[hVelp]?*)
+        set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
+      -*)
+        die 22 "Unknown option ${1@Q}"
+        ;;
+      *)
+        if [[ -z $filename ]]; then
+          filename="$1"
+        else
+          die 1 'Multiple filenames not supported. Use one file at a time.'
+        fi
+        ;;
+    esac; shift; done
+
+    # Check if filename specified
+    [[ -n $filename ]] || die 1 "No file specified. Try 'editcmd --help' for usage."
+
+    # Determine editor
+    if [[ -z $editor_type ]]; then
+      editor_type=$(detect_editor_from_env)
+      # Default to vim if EDITOR environment variable is not set
+      if [[ $editor_type == joe && -z "${EDITOR:-}" ]]; then
+        editor_type=vim
       fi
-      ;;
-  esac; shift; done
-
-  # Check if filename specified
-  [[ -n $filename ]] || die 1 "No file specified. Try 'editcmd --help' for usage."
-
-  # Determine editor
-  if [[ -z $editor_type ]]; then
-    editor_type=$(detect_editor_from_env)
-    # Default to vim if EDITOR environment variable is not set
-    if [[ $editor_type == joe && -z "${EDITOR:-}" ]]; then
-      editor_type=vim
     fi
-  fi
 
-  # Export EDITOR_TYPE for map_to_editor function
-  export EDITOR_TYPE="$editor_type"
+    # Export EDITOR_TYPE for map_to_editor function
+    export EDITOR_TYPE="$editor_type"
 
-  # Detect file type
-  syntax=$(filetype "$filename") || die 1 "Failed to detect file type for ${filename@Q}"
+    # Detect file type
+    syntax=$(filetype "$filename") || die 1 "Failed to detect file type for ${filename@Q}"
 
-  # Map to editor-specific syntax
-  syntax=$(map_to_editor "$syntax" "$filename")
+    # Map to editor-specific syntax
+    syntax=$(map_to_editor "$syntax" "$filename")
 
-  # Build editor command
-  cmd=$(build_editor_command "$editor_type" "$syntax" "$filename" "$line_no") || {
-    exit 1
-  }
+    # Build editor command
+    cmd=$(build_editor_command "$editor_type" "$syntax" "$filename" "$line_no") || {
+      exit 1
+    }
 
-  # Execute or print command
-  if ((dry_run)); then
-    echo "$cmd"
-  else
-    # Inputs are controlled: validated editor enum, detection-sourced syntax, printf %q escaped filename
-    bash -c "$cmd"
-  fi
-  ;;
+    # Execute or print command
+    if ((dry_run)); then
+      echo "$cmd"
+    else
+      # Inputs are controlled: validated editor enum, detection-sourced syntax, printf %q escaped filename
+      bash -c "$cmd"
+    fi
+    ;;
 
-*)
-  # -- filetype CLI mode --
-  declare -- EDITOR_TYPE=''
-  declare -a files=()
+  *)
+    # -- filetype CLI mode --
+    declare -- EDITOR_TYPE=''
+    declare -a files=()
 
-  while (($#)); do case $1 in
-    -h|--help)
-      show_help
-      exit 0
-      ;;
-    -V|--version)
-      echo "filetype $FILETYPE_VERSION"
-      exit 0
-      ;;
-    -e|--editor)
-      require_arg "$@"
-      shift
-      EDITOR_TYPE=$1
-      validate_editor "$EDITOR_TYPE"
-      ;;
+    while (($#)); do case $1 in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      -V|--version)
+        echo "filetype $FILETYPE_VERSION"
+        exit 0
+        ;;
+      -e|--editor)
+        noarg "$@"
+        shift
+        EDITOR_TYPE=$1
+        validate_editor "$EDITOR_TYPE"
+        ;;
 
-    --)
-      shift; break ;;
-    -[heV]?*)
-      set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
+      --)
+        shift; break ;;
+      -[heV]?*)
+        set -- "${1:0:2}" "-${1:2}" "${@:2}"; continue ;;
 
-    -*)
-      die 22 "Unknown option ${1@Q}"
-      ;;
-    *)
-      files+=("$1")
-      ;;
-  esac; shift; done
+      -*)
+        die 22 "Unknown option ${1@Q}"
+        ;;
+      *)
+        files+=("$1")
+        ;;
+    esac; shift; done
 
-  # Remaining args after -- are files
-  files+=("$@")
+    # Remaining args after -- are files
+    files+=("$@")
 
-  # Check if any files specified
-  ((${#files[@]})) || die 1 "No files specified"
+    # Check if any files specified
+    ((${#files[@]})) || die 1 'No files specified'
 
-  # Export EDITOR_TYPE for use in map_to_editor function
-  export EDITOR_TYPE
+    # Export EDITOR_TYPE for use in map_to_editor function
+    export EDITOR_TYPE
 
-  # Process files
-  declare -- file result
-  if ((${#files[@]} > 1)); then
-    # Batch mode: prefix with filename
-    for file in "${files[@]}"; do
-      result=$(filetype "$file")
-      result=$(map_to_editor "$result" "$file")
-      printf '%s: %s\n' "$file" "$result"
-    done
-  else
-    # Single file mode
-    result=$(filetype "${files[0]}")
-    result=$(map_to_editor "$result" "${files[0]}")
-    echo "$result"
-  fi
-  ;;
+    # Process files
+    declare -- file result
+    if ((${#files[@]} > 1)); then
+      # Batch mode: prefix with filename
+      for file in "${files[@]}"; do
+        result=$(filetype "$file")
+        result=$(map_to_editor "$result" "$file")
+        printf '%s: %s\n' "$file" "$result"
+      done
+    else
+      # Single file mode
+      result=$(filetype "${files[0]}")
+      result=$(map_to_editor "$result" "${files[0]}")
+      echo "$result"
+    fi
+    ;;
 esac
 
 #fin

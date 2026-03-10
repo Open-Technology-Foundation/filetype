@@ -178,39 +178,6 @@ result=$(filetype ".")
 assert_equals "directory" "$result" "filetype(.) → directory"
 
 # ========================================
-# filetype-lib.sh Backward Compatibility
-# ========================================
-
-print_section "Library Mode: filetype-lib.sh Backward Compatibility"
-
-# Source filetype-lib.sh in a subshell to verify it works
-result=$(
-  source "../filetype-lib.sh"
-  filetype "fixtures/extensions/test.py"
-)
-assert_equals "python" "$result" "filetype-lib.sh: filetype() works"
-
-result=$(
-  source "../filetype-lib.sh"
-  echo "$FILETYPE_VERSION"
-)
-assert_contains "$result" "1.0.0" "filetype-lib.sh: FILETYPE_VERSION exported"
-
-result=$(
-  source "../filetype-lib.sh"
-  EDITOR_TYPE=nano
-  export EDITOR_TYPE
-  map_to_editor "js" "test.js"
-)
-assert_equals "javascript" "$result" "filetype-lib.sh: map_to_editor() works"
-
-result=$(
-  source "../filetype-lib.sh"
-  detect_editor_from_env
-)
-assert_equals "joe" "$result" "filetype-lib.sh: detect_editor_from_env() works"
-
-# ========================================
 # detect_editor_from_env() Extended
 # ========================================
 
