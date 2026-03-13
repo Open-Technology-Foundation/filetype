@@ -118,11 +118,17 @@ This installs executables to `/usr/local/bin/`, manpages to `/usr/local/share/ma
 If you prefer manual installation or need a custom location:
 
 ```bash
-# Copy executable
+# Copy executable and create symlink
 sudo install -m 755 filetype /usr/local/bin/filetype
-
-# Create editcmd symlink
 sudo ln -sf filetype /usr/local/bin/editcmd
+
+# Install manpages
+sudo install -d /usr/local/share/man/man1
+sudo install -m 644 filetype.1 /usr/local/share/man/man1/filetype.1
+sudo ln -sf filetype.1 /usr/local/share/man/man1/editcmd.1
+
+# Install bash completion
+sudo install -m 644 filetype.bash_completion /etc/bash_completion.d/filetype
 ```
 
 ### Alternative: Add to PATH
@@ -548,7 +554,7 @@ filetype -e <TAB>        # Shows: joe nano vim emacs vscode helix micro zed
 editcmd -e <TAB>         # Shows: joe nano vim emacs vscode helix micro zed
 
 # Or source manually
-source /path/to/filetype/.bash_completion
+source /path/to/filetype/filetype.bash_completion
 ```
 
 ## Requirements
@@ -562,7 +568,7 @@ source /path/to/filetype/.bash_completion
 filetype/
 ├── filetype                 # Bash: core library + CLI + editcmd mode (~700 lines)
 ├── editcmd -> filetype      # Symlink: triggers editcmd CLI mode
-├── .bash_completion         # Bash completion support (filetype + editcmd)
+├── filetype.bash_completion  # Bash completion support (filetype + editcmd)
 ├── Makefile                 # Install/uninstall (sudo make install)
 ├── filetype.1               # Manpage (also covers editcmd)
 ├── INSTALL.md               # Installation guide

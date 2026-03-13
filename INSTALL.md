@@ -169,7 +169,7 @@ editcmd -e <TAB>         # Shows: joe nano vim emacs vscode helix micro zed
 If `/etc/bash_completion.d/` doesn't exist on your system, source manually:
 
 ```bash
-source /path/to/filetype/.bash_completion
+source /path/to/filetype/filetype.bash_completion
 ```
 
 ## Makefile Targets
